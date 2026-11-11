@@ -9,10 +9,22 @@
 <meta name="apple-mobile-web-app-title" content="橘子時鐘" />
 <meta name="theme-color" content="#D9500F" />
 <title>橘子時鐘</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="icons/icon-192.png" />
 <style>
+  /* @fonts-begin: self-hosted so the clock works offline (subset: Latin; Big5 Traditional Chinese) */
+  @font-face {
+    font-family: "Archivo";
+    src: url("fonts/archivo.woff2") format("woff2");
+    font-weight: 300 900; font-stretch: 100% 125%; font-display: swap;
+  }
+  @font-face {
+    font-family: "Noto Sans TC";
+    src: url("fonts/noto-tc.woff2") format("woff2");
+    font-weight: 500 900; font-display: swap;
+  }
+  /* @fonts-end */
   /* Layout: two full-screen pages side by side (clock / price notice), swiped horizontally; teacher controls in a side sheet. */
   :root {
     --orange: #D9500F;
@@ -369,6 +381,8 @@
     border: 2px solid var(--sheet-line); background: transparent; border-radius: 12px;
     padding: 8px 14px; font-size: 15px; font-weight: 700; color: var(--sheet-ink); min-height: 44px;
   }
+  .offline { font-size: 15px; font-weight: 700; color: var(--sheet-muted); }
+  .offline.ready { color: #2F6B1F; }
   .help { margin: 0; font-size: 15px; color: var(--sheet-muted); line-height: 1.6; }
 
   /* ─── Alarm takeover ─── */
@@ -506,6 +520,10 @@
         <div class="pref">
           <span>提醒聲音</span>
           <button class="test-btn" id="testBtn" type="button">試聽</button>
+        </div>
+        <div class="pref">
+          <span>離線使用</span>
+          <span class="offline" id="offline">檢查中…</span>
         </div>
       </div>
     </div>
@@ -1031,6 +1049,23 @@
   renderNotice();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitNotice);
   loop();
+
+  // ── Offline: service worker precaches the page, fonts and icons ──
+  const offlineEl = $("offline");
+  function setOffline(text, ready) { offlineEl.textContent = text; offlineEl.classList.toggle("ready", !!ready); }
+  async function checkOffline() {
+    try {
+      const hit = await caches.match("fonts/noto-tc.woff2");
+      setOffline(hit ? "已可離線使用" : "下載中，請保持連線", !!hit);
+      if (!hit) setTimeout(checkOffline, 3000);
+    } catch { setOffline("無法檢查", false); }
+  }
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready).then(checkOffline)
+      .catch(() => setOffline("此網址不支援離線", false));
+  } else {
+    setOffline("需從網址開啟才能離線", false);
+  }
 })();
 </script>
 </body>

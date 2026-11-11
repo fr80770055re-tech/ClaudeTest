@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Static HTML/CSS/JS in a single file (`clock/index.html`), no build step and no backend. Also published as a claude.ai Artifact for opening directly on the iPad.
+Static HTML/CSS/JS in a single file (`clock/index.html`), no build step and no backend. Deployed with GitHub Pages for offline install; also published as a claude.ai Artifact for online preview.
 
 ## Users
 
@@ -52,9 +52,12 @@ It runs on an iPad the class already has, as one page with no app install, accou
 - **iPadOS platform limits:**
   - The first tap unlocks audio and requests a screen wake lock.
   - Reminders cannot ring while Safari is in the background or the screen is locked.
-- **Offline gap (not yet built):**
-  - Fonts currently load from Google Fonts, and the published Artifact needs a network connection to open.
-  - True offline use needs self-hosted fonts plus a service worker or Add-to-Home-Screen install path.
+- **Offline:**
+  - Fonts are self-hosted in `fonts/`: Archivo (Latin) and Noto Sans TC subset to all Big5 characters (about 3.8 MB).
+  - `sw.js` precaches the page, fonts and icons on the first online visit; afterwards the page opens with no network.
+  - Opened from the GitHub Pages URL and added to the iPad Home Screen (`manifest.webmanifest`, full screen, landscape).
+  - The settings sheet shows whether offline use is ready.
+  - The claude.ai Artifact copy still needs a network connection and is for preview only.
 - **Undecided:** whether a countdown mode is needed alongside clock-time reminders.
 
 ## Evidence on Hand
