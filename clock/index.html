@@ -30,6 +30,7 @@
     --orange: #D9500F;
     --orange-deep: #B8420B;
     --orange-ink: #7A2A05;
+    --orange-recess: #C4470D; /* orange under the 22% shade: what shows behind the receding clock */
     --cream: #F7EFE2;
     --cream-dim: rgba(247, 239, 226, .93);
     --cream-line: rgba(247, 239, 226, .28);
@@ -65,15 +66,13 @@
   :focus-visible { outline: 3px solid var(--cream); outline-offset: 4px; border-radius: 12px; }
 
   /* ─── Pager ─── */
-  .pager { position: fixed; inset: 0; overflow: hidden; touch-action: none; }
-  .track {
-    display: flex; width: 200%; height: 100%;
-    transition: transform .6s var(--ease);
-    will-change: transform;
-  }
-  .track.dragging { transition: none; }
+  .pager { position: fixed; inset: 0; overflow: hidden; touch-action: none; background: var(--orange-recess); }
+  .track { position: absolute; inset: 0; }
+  /* The notice is a card stacked on the clock: it slides over it while the clock recedes. */
   .page {
-    width: 50%; height: 100%;
+    position: absolute; inset: 0;
+    background: var(--orange);
+    transform-origin: 50% 50%;
     display: grid;
     grid-template-rows: auto 1fr auto;
     padding: var(--pad-t) var(--pad-r) var(--pad-b) var(--pad-x);
@@ -137,7 +136,10 @@
   .next.empty { color: var(--cream-dim); font-weight: 500; }
 
   /* ─── Notice page ─── */
-  .notice { gap: 3vh; }
+  .page > :not(.shade) { translate: var(--edge, 0px) 0; }
+  .shade { position: absolute; inset: 0; background: var(--orange-ink); opacity: 0; pointer-events: none; }
+  .notice { gap: 3vh; z-index: 1; box-shadow: -16px 0 48px rgba(74, 28, 4, .32); }
+  .pager.moving .page, .pager.moving .n-items li { will-change: transform; }
   .n-head { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; min-width: 0; }
   .n-head h1 {
     margin: 0; min-width: 0;
@@ -194,11 +196,9 @@
     display: grid; place-items: center;
   }
   .dots button::before {
-    content: ""; width: 12px; height: 12px; border-radius: 6px;
-    background: var(--cream-line);
-    transition: width .45s var(--ease), background .45s var(--ease);
+    content: ""; width: var(--w, 12px); height: 12px; border-radius: 6px;
+    background: var(--cream); opacity: var(--o, .3);
   }
-  .dots button[aria-current="true"]::before { width: 32px; background: var(--cream); }
 
   .actions {
     position: fixed; right: var(--pad-r); bottom: var(--pad-b);
@@ -424,6 +424,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition-duration: .01ms !important; animation: none !important; }
+    .page { transition: opacity .2s linear !important; }
   }
 </style>
 </head>
@@ -432,6 +433,7 @@
     <div class="track" id="track">
       <!-- Page 1: clock -->
       <main class="page" id="pClock" aria-label="時鐘">
+        <div class="shade" id="shade"></div>
         <header class="top">
           <div><span id="date">—</span><span class="weekday" id="weekday"></span></div>
           <div class="ampm" id="ampm" aria-hidden="true"></div>
@@ -776,53 +778,126 @@
   };
 
   // ── Pages & swipe ──
-  const track = $("track");
+  // pos: 0 = clock, 1 = notice. The finger drives pos directly while dragging;
+  // on release a critically damped spring carries it home, keeping the release velocity.
+  const pager = $("pager"), clockEl = $("pClock"), noticeEl = $("pNotice"), shade = $("shade");
+  const reduceMQ = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
   let page = state.page === 1 ? 1 : 0;
-  function go(p, persist = true) {
-    page = Math.max(0, Math.min(1, p));
-    track.style.transform = `translateX(${-page * 50}%)`;
-    $("pClock").setAttribute("aria-hidden", String(page !== 0));
-    $("pNotice").setAttribute("aria-hidden", String(page !== 1));
+  let pos = page, vel = 0, target = page, edge = 0, raf = 0, last = 0;
+
+  function paint() {
+    const w = window.innerWidth;
+    const p = Math.min(1, Math.max(0, pos));
+    if (reduceMQ.matches) {
+      clockEl.style.transform = noticeEl.style.transform = "";
+      noticeEl.style.opacity = p >= 0.5 ? "1" : "0";
+      noticeEl.style.visibility = p >= 0.5 ? "visible" : "hidden";
+      shade.style.opacity = "0";
+    } else {
+      noticeEl.style.opacity = "";
+      clockEl.style.transform = `translate3d(${-p * w * 0.28}px,0,0) scale(${1 - 0.06 * p})`;
+      shade.style.opacity = String(0.22 * p);
+      noticeEl.style.transform = `translate3d(${(1 - p) * (w + 72)}px,0,0)`;
+      noticeEl.style.visibility = p < 0.0005 ? "hidden" : "visible";
+      // Cascade: the title and each row lag a little more than the one above.
+      const lag = (1 - p) * w;
+      $("nTitle").parentElement.style.transform = `translate3d(${lag * 0.05}px,0,0)`;
+      [...$("nItems").children].forEach((li, i) => {
+        li.style.transform = `translate3d(${lag * (0.08 + 0.035 * i)}px,0,0)`;
+      });
+      $("nNote").style.transform = `translate3d(${lag * 0.12}px,0,0)`;
+    }
+    const activeEl = p < 0.5 ? clockEl : noticeEl;
+    clockEl.style.setProperty("--edge", activeEl === clockEl ? `${edge}px` : "0px");
+    noticeEl.style.setProperty("--edge", activeEl === noticeEl ? `${edge}px` : "0px");
+    // Indicator: the pill stretches between the dots with the finger.
+    $("dot0").style.setProperty("--w", `${32 - 20 * p}px`);
+    $("dot0").style.setProperty("--o", String(1 - 0.7 * p));
+    $("dot1").style.setProperty("--w", `${12 + 20 * p}px`);
+    $("dot1").style.setProperty("--o", String(0.3 + 0.7 * p));
+  }
+
+  function settle() {
+    pager.classList.remove("moving");
+    const changed = page !== target;
+    page = target;
+    clockEl.setAttribute("aria-hidden", String(page !== 0));
+    noticeEl.setAttribute("aria-hidden", String(page !== 1));
+    clockEl.inert = page !== 0; noticeEl.inert = page !== 1;
     $("dot0").setAttribute("aria-current", String(page === 0));
     $("dot1").setAttribute("aria-current", String(page === 1));
-    if (persist) { state.page = page; save(); }
-    if (page === 1) requestAnimationFrame(fitNotice);
+    if (changed) { state.page = page; save(); }
   }
+
+  function step(now) {
+    const dt = Math.min(0.034, (now - last) / 1000);
+    last = now;
+    const k = 210, c = 2 * Math.sqrt(k);            // critically damped: no overshoot
+    vel += (-k * (pos - target) - c * vel) * dt;
+    pos += vel * dt;
+    edge *= Math.exp(-dt * 16);
+    if (Math.abs(pos - target) < 0.0008 && Math.abs(vel) < 0.01 && Math.abs(edge) < 0.5) {
+      pos = target; vel = 0; edge = 0; raf = 0;
+      paint(); settle();
+      return;
+    }
+    paint();
+    raf = requestAnimationFrame(step);
+  }
+
+  function animateTo(t, v0 = vel) {
+    target = Math.max(0, Math.min(1, t));
+    if (reduceMQ.matches) { pos = target; vel = 0; edge = 0; paint(); settle(); return; }
+    vel = v0;
+    pager.classList.add("moving");
+    if (!raf) { last = performance.now(); raf = requestAnimationFrame(step); }
+  }
+  const go = (p) => animateTo(p, 0);
   $("dot0").onclick = () => go(0);
   $("dot1").onclick = () => go(1);
 
   const blocked = () => ringing || document.body.classList.contains("settings-open");
   let drag = null;
-  $("pager").addEventListener("pointerdown", (e) => {
+  pager.addEventListener("pointerdown", (e) => {
     if (blocked() || e.button > 0) return;
-    drag = { x: e.clientX, y: e.clientY, dx: 0, active: false };
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }   // catch the page mid-flight
+    drag = { x: e.clientX, y: e.clientY, startPos: pos, active: false, samples: [[e.clientX, e.timeStamp]] };
   });
   window.addEventListener("pointermove", (e) => {
     if (!drag) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (!drag.active) {
-      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) { drag.active = true; track.classList.add("dragging"); }
-      else if (Math.abs(dy) > 14) { drag = null; return; }
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { drag.active = true; pager.classList.add("moving"); }
+      else if (Math.abs(dy) > 14) { drag = null; if (pos !== target) animateTo(target); return; }
       else return;
     }
-    drag.dx = dx;
-    const atEdge = (page === 0 && dx > 0) || (page === 1 && dx < 0);
-    const off = atEdge ? dx * 0.25 : dx;
-    track.style.transform = `translateX(calc(${-page * 50}% + ${off}px))`;
+    drag.samples.push([e.clientX, e.timeStamp]);
+    if (drag.samples.length > 5) drag.samples.shift();
+    const raw = drag.startPos - dx / window.innerWidth;
+    pos = Math.max(0, Math.min(1, raw));
+    // Rubber band past either end: the content resists instead of the card leaving.
+    const over = (raw - pos) * -window.innerWidth;
+    edge = over === 0 ? 0 : Math.sign(over) * Math.min(80, Math.abs(over) * 0.35);
+    if (!reduceMQ.matches) paint();
   });
-  const endDrag = () => {
+  const endDrag = (e) => {
     if (!drag) return;
-    const { active, dx } = drag;
-    drag = null;
-    if (!active) return;
-    track.classList.remove("dragging");
-    const threshold = Math.min(120, window.innerWidth * 0.08);
-    if (dx < -threshold) go(page + 1);
-    else if (dx > threshold) go(page - 1);
-    else go(page, false);
+    const d = drag; drag = null;
+    if (!d.active) { if (pos !== target) animateTo(target); return; }
+    const [x0, t0] = d.samples[0], [x1, t1] = d.samples[d.samples.length - 1];
+    const stale = e && e.timeStamp - t1 > 80;                   // finger paused before lifting
+    const vpx = !stale && t1 > t0 ? (x1 - x0) / (t1 - t0) : 0;  // px per ms, + = rightward
+    const v = (-vpx * 1000) / window.innerWidth;                 // pos units per second
+    let next;
+    if (Math.abs(vpx) > 0.35) next = vpx < 0 ? 1 : 0;            // a flick decides on its own
+    else next = pos + v * 0.12 > 0.5 ? 1 : 0;
+    if (reduceMQ.matches) { animateTo(next); return; }
+    animateTo(next, Math.abs(vpx) > 0.35 ? v : vel);
   };
   window.addEventListener("pointerup", endDrag);
   window.addEventListener("pointercancel", endDrag);
+  window.addEventListener("resize", paint);
+  if (reduceMQ.addEventListener) reduceMQ.addEventListener("change", paint);
 
   // ── Notice rendering ──
   function priceParts(p) {
@@ -854,6 +929,7 @@
       ul.append(li);
     }
     fitNotice();
+    paint();
   }
   function fitNotice() {
     const ul = $("nItems");
@@ -962,8 +1038,8 @@
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { if (ringing) dismiss(); else closeSettings(); return; }
     if (blocked() || /INPUT|TEXTAREA/.test(document.activeElement?.tagName || "")) return;
-    if (e.key === "ArrowRight") go(page + 1);
-    if (e.key === "ArrowLeft") go(page - 1);
+    if (e.key === "ArrowRight") go(target + 1);
+    if (e.key === "ArrowLeft") go(target - 1);
   });
 
   $("addForm").addEventListener("submit", (e) => {
@@ -1042,9 +1118,7 @@
     setTimeout(loop, 1000 - (Date.now() % 1000) + 5);
   }
 
-  track.classList.add("dragging");
-  go(page, false);
-  requestAnimationFrame(() => track.classList.remove("dragging"));
+  target = page; paint(); settle();
   renderList();
   renderItems();
   renderNotice();

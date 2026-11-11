@@ -2,7 +2,7 @@
 // Install: precache everything the page needs, so it works offline after one visit.
 // Page (navigation): network first with a short timeout, so updates arrive when online
 // but a slow venue network never stalls the clock. Other files: cache first.
-const CACHE = "orange-clock-v3";
+const CACHE = "orange-clock-v4";
 const ASSETS = [
   "./",
   "index.html",
