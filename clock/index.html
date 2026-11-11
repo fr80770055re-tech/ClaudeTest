@@ -102,12 +102,12 @@
     font-variation-settings: "wdth" 118;
     line-height: .8;
     letter-spacing: -.02em;
-    font-size: min(26.5vw, 58vh);
+    font-size: min(23.5vw, 54vh);
     margin-top: -2vh;
   }
-  .digit { display: inline-block; width: .64em; text-align: center; }
+  .digit { display: inline-block; width: .7em; text-align: center; }
   .colon {
-    display: inline-block; width: .26em; text-align: center;
+    display: inline-block; width: .42em; text-align: center;
     transform: translateY(-.06em);
     transition: opacity .6s var(--ease);
   }
@@ -411,6 +411,7 @@
   .alarm .ok { background: var(--orange); color: var(--cream); border: 0; }
   .alarm .snooze { background: transparent; color: var(--orange); border: 3px solid var(--orange); }
   .alarm :focus-visible { outline-color: var(--orange); }
+  .alarm .a-colon { display: inline-block; margin: 0 .09em; transform: translateY(-.05em); }
   body.alarming .alarm .a-time { animation: pulse 1.2s var(--ease) infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 
@@ -683,7 +684,7 @@
   // ── Alarm takeover ──
   function fire(r, now) {
     ringing = r;
-    $("aTime").textContent = fmtHM(now.getHours(), now.getMinutes());
+    $("aTime").innerHTML = fmtHM(now.getHours(), now.getMinutes()).replace(":", '<span class="a-colon">:</span>');
     $("aLabel").textContent = r.label || "提醒時間到了";
     document.body.classList.add("alarming");
     $("alarm").setAttribute("aria-hidden", "false");
