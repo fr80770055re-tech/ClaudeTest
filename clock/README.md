@@ -15,5 +15,5 @@
 
 - `index.html`：整個頁面。
 - `sw.js`：離線快取。更新任何檔案時，把 `CACHE` 版本號加一。
-- `fonts/`：Archivo 與 Noto Sans TC（Big5 字集子集），授權為 SIL OFL 1.1，見同資料夾的 OFL 檔。
+- `fonts/`：Archivo 與昭源圓體 Chiron GoRound TC（Big5 字集子集），授權為 SIL OFL 1.1，見同資料夾的 OFL 檔。
 - `icons/`、`manifest.webmanifest`：主畫面圖示與 App 設定。

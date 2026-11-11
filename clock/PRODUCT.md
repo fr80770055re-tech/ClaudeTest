@@ -53,7 +53,7 @@ It runs on an iPad the class already has, as one page with no app install, accou
   - The first tap unlocks audio and requests a screen wake lock.
   - Reminders cannot ring while Safari is in the background or the screen is locked.
 - **Offline:**
-  - Fonts are self-hosted in `fonts/`: Archivo (Latin) and Noto Sans TC subset to all Big5 characters (about 3.8 MB).
+  - Fonts are self-hosted in `fonts/`: Archivo (Latin) and Chiron GoRound TC (昭源圓體) subset to all Big5 characters (about 6.3 MB).
   - `sw.js` precaches the page, fonts and icons on the first online visit; afterwards the page opens with no network.
   - Opened from the GitHub Pages URL and added to the iPad Home Screen (`manifest.webmanifest`, full screen, landscape).
   - The settings sheet shows whether offline use is ready.

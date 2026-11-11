@@ -2,13 +2,13 @@
 // Install: precache everything the page needs, so it works offline after one visit.
 // Page (navigation): network first with a short timeout, so updates arrive when online
 // but a slow venue network never stalls the clock. Other files: cache first.
-const CACHE = "orange-clock-v1";
+const CACHE = "orange-clock-v2";
 const ASSETS = [
   "./",
   "index.html",
   "manifest.webmanifest",
   "fonts/archivo.woff2",
-  "fonts/noto-tc.woff2",
+  "fonts/chiron-goround-tc.woff2",
   "icons/icon-192.png",
   "icons/icon-512.png",
   "icons/apple-touch-icon.png",
