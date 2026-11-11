@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="橘子時鐘" />
+<meta name="theme-color" content="#D9500F" />
+<title>橘子時鐘</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..900&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --orange: #D9500F;
+    --orange-deep: #B8420B;
+    --orange-ink: #7A2A05;
+    --cream: #F7EFE2;
+    --cream-dim: rgba(247, 239, 226, .78);
+    --cream-line: rgba(247, 239, 226, .28);
+    --sheet: #F7EFE2;
+    --sheet-ink: #4A1C04;
+    --sheet-muted: #8A4A22;
+    --sheet-line: #E6D6BF;
+    --ease: cubic-bezier(.16, 1, .3, 1);
+    --latin: "Archivo", "Noto Sans TC", system-ui, sans-serif;
+    --han: "Noto Sans TC", "Archivo", system-ui, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--orange);
+    color: var(--cream);
+    font-family: var(--han);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--cream); color: var(--orange); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--cream); outline-offset: 4px; border-radius: 12px; }
+
+  /* ─── Stage ─── */
+  .stage {
+    position: fixed; inset: 0;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding:
+      max(3.2vh, env(safe-area-inset-top))
+      max(4.2vw, env(safe-area-inset-right))
+      max(3.6vh, env(safe-area-inset-bottom))
+      max(4.2vw, env(safe-area-inset-left));
+  }
+
+  .top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: clamp(22px, 2.6vw, 34px);
+    font-weight: 700;
+    letter-spacing: .02em;
+  }
+  .top .weekday { color: var(--cream-dim); font-weight: 500; margin-left: .6em; }
+  .top .ampm {
+    font-family: var(--latin);
+    font-variation-settings: "wdth" 112;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+
+  /* ─── Time ─── */
+  .time {
+    align-self: center; justify-self: center;
+    display: flex; align-items: flex-start;
+    font-family: var(--latin);
+    font-weight: 800;
+    font-variation-settings: "wdth" 118;
+    line-height: .8;
+    letter-spacing: -.02em;
+    font-size: min(26.5vw, 58vh);
+    margin-top: -2vh;
+  }
+  .digit {
+    display: inline-block;
+    width: .64em;
+    text-align: center;
+  }
+  .colon {
+    display: inline-block;
+    width: .26em;
+    text-align: center;
+    transform: translateY(-.06em);
+    transition: opacity .6s var(--ease);
+  }
+  .colon.dim { opacity: .35; }
+  .seconds {
+    font-size: .2em;
+    font-weight: 600;
+    font-variation-settings: "wdth" 100;
+    color: var(--cream-dim);
+    margin-left: .35em;
+    margin-top: .12em;
+    letter-spacing: 0;
+  }
+  .seconds .digit { width: .6em; }
+
+  /* ─── Bottom bar ─── */
+  .bottom {
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;
+  }
+  .next {
+    display: flex; align-items: center; gap: 14px;
+    font-size: clamp(20px, 2.2vw, 28px);
+    font-weight: 700;
+    min-height: 56px;
+  }
+  .next svg { width: 1.15em; height: 1.15em; flex: none; }
+  .next .when {
+    font-family: var(--latin);
+    font-variation-settings: "wdth" 110;
+    font-weight: 700;
+  }
+  .next .lbl { color: var(--cream-dim); font-weight: 500; }
+  .next.empty { color: var(--cream-dim); font-weight: 500; }
+
+  .icon-btn {
+    width: 64px; height: 64px;
+    display: grid; place-items: center;
+    background: transparent;
+    border: 2px solid var(--cream-line);
+    border-radius: 50%;
+    transition: background .3s var(--ease), border-color .3s var(--ease), transform .3s var(--ease);
+  }
+  .icon-btn svg { width: 28px; height: 28px; }
+  .icon-btn:hover { border-color: var(--cream); }
+  .icon-btn:active { transform: scale(.94); background: rgba(247,239,226,.12); }
+  .actions { display: flex; gap: 14px; }
+
+  .hint {
+    position: fixed; left: 50%; top: max(3.2vh, env(safe-area-inset-top));
+    transform: translate(-50%, 0);
+    background: var(--cream); color: var(--orange-ink);
+    font-size: 18px; font-weight: 700;
+    padding: 12px 22px; border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(74, 28, 4, .25);
+    transition: opacity .5s var(--ease), transform .5s var(--ease);
+  }
+  .hint[hidden] { display: block; opacity: 0; transform: translate(-50%, -16px); pointer-events: none; }
+
+  /* ─── Settings sheet ─── */
+  .scrim {
+    position: fixed; inset: 0;
+    background: rgba(74, 28, 4, .35);
+    opacity: 0; pointer-events: none;
+    transition: opacity .45s var(--ease);
+  }
+  .sheet {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: min(460px, 92vw);
+    background: var(--sheet); color: var(--sheet-ink);
+    padding:
+      max(28px, env(safe-area-inset-top))
+      max(28px, env(safe-area-inset-right))
+      max(28px, env(safe-area-inset-bottom))
+      28px;
+    display: flex; flex-direction: column; gap: 22px;
+    transform: translateX(110%);
+    visibility: hidden;
+    transition: transform .55s var(--ease), visibility 0s linear .55s;
+    box-shadow: -12px 0 40px rgba(74, 28, 4, .25);
+    -webkit-user-select: auto; user-select: auto;
+  }
+  body.settings-open .scrim { opacity: 1; pointer-events: auto; }
+  body.settings-open .sheet { transform: none; visibility: visible; transition: transform .55s var(--ease), visibility 0s; }
+  .sheet ::selection { background: var(--orange); color: var(--cream); }
+  .sheet :focus-visible { outline-color: var(--orange); }
+
+  .sheet-head { display: flex; justify-content: space-between; align-items: center; }
+  .sheet h2 { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: .02em; }
+  .close {
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 0; background: var(--sheet-line);
+    display: grid; place-items: center;
+  }
+  .close svg { width: 22px; height: 22px; }
+
+  form.add {
+    display: grid; gap: 14px;
+    padding-bottom: 22px; border-bottom: 1px solid var(--sheet-line);
+  }
+  .row { display: flex; gap: 12px; }
+  .field { display: grid; gap: 6px; flex: 1; }
+  .field > span { font-size: 15px; font-weight: 700; color: var(--sheet-muted); }
+  input[type="time"], input[type="text"] {
+    width: 100%;
+    font: inherit;
+    font-size: 22px; font-weight: 700;
+    color: var(--sheet-ink);
+    background: #FFFAF2;
+    border: 2px solid var(--sheet-line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    min-height: 56px;
+    caret-color: var(--orange);
+    -webkit-appearance: none; appearance: none;
+    transition: border-color .25s var(--ease);
+  }
+  input[type="time"] { font-family: var(--latin); font-variation-settings: "wdth" 108; }
+  input::placeholder { color: #B07A55; font-weight: 500; }
+  input:focus { outline: none; border-color: var(--orange); }
+
+  .seg {
+    display: grid; grid-template-columns: 1fr 1fr;
+    background: var(--sheet-line); border-radius: 14px; padding: 4px;
+  }
+  .seg label { position: relative; }
+  .seg input { position: absolute; opacity: 0; inset: 0; margin: 0; }
+  .seg span {
+    display: grid; place-items: center;
+    min-height: 48px; border-radius: 10px;
+    font-size: 17px; font-weight: 700; color: var(--sheet-muted);
+    transition: background .25s var(--ease), color .25s var(--ease);
+  }
+  .seg input:checked + span { background: #FFFAF2; color: var(--sheet-ink); box-shadow: 0 2px 6px rgba(74,28,4,.12); }
+  .seg input:focus-visible + span { outline: 3px solid var(--orange); outline-offset: 2px; }
+
+  .primary {
+    min-height: 58px; border: 0; border-radius: 14px;
+    background: var(--orange); color: var(--cream);
+    font-size: 20px; font-weight: 900; letter-spacing: .06em;
+    transition: background .25s var(--ease), transform .25s var(--ease);
+  }
+  .primary:hover { background: var(--orange-deep); }
+  .primary:active { transform: scale(.98); }
+
+  .list-title { display: flex; justify-content: space-between; align-items: baseline; margin: 0; }
+  .list-title h3 { margin: 0; font-size: 17px; font-weight: 900; }
+  .list-title small { color: var(--sheet-muted); font-size: 15px; font-weight: 500; }
+
+  .list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; margin-right: -10px; padding-right: 10px; }
+  .list::-webkit-scrollbar { width: 6px; }
+  .list::-webkit-scrollbar-thumb { background: var(--sheet-line); border-radius: 3px; }
+  .list li {
+    display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
+    padding: 14px 0; border-bottom: 1px solid var(--sheet-line);
+  }
+  .list .t {
+    font-family: var(--latin); font-variation-settings: "wdth" 112;
+    font-size: 34px; font-weight: 800; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .list .meta { display: block; margin-top: 6px; font-size: 15px; color: var(--sheet-muted); font-weight: 500; }
+  .list li.off .t, .list li.off .meta { opacity: .45; }
+
+  .switch {
+    width: 58px; height: 34px; border-radius: 999px; border: 0;
+    background: var(--sheet-line); position: relative; padding: 0;
+    transition: background .3s var(--ease);
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 28px; height: 28px; border-radius: 50%; background: #FFFAF2;
+    box-shadow: 0 2px 4px rgba(74,28,4,.2);
+    transition: transform .3s var(--ease);
+  }
+  .switch[aria-checked="true"] { background: var(--orange); }
+  .switch[aria-checked="true"]::after { transform: translateX(24px); }
+
+  .del {
+    width: 44px; height: 44px; border-radius: 50%; border: 0;
+    background: transparent; color: var(--sheet-muted);
+    display: grid; place-items: center;
+  }
+  .del svg { width: 22px; height: 22px; }
+  .del:hover { background: var(--sheet-line); color: var(--sheet-ink); }
+
+  .empty-list { color: var(--sheet-muted); font-size: 16px; line-height: 1.6; padding: 18px 0; }
+
+  .prefs { display: grid; gap: 10px; padding-top: 4px; border-top: 1px solid var(--sheet-line); }
+  .pref { display: flex; justify-content: space-between; align-items: center; min-height: 48px; font-size: 17px; font-weight: 700; }
+  .test-btn {
+    border: 2px solid var(--sheet-line); background: transparent; border-radius: 12px;
+    padding: 8px 14px; font-size: 15px; font-weight: 700; color: var(--sheet-ink); min-height: 44px;
+  }
+
+  /* ─── Alarm takeover ─── */
+  .alarm {
+    position: fixed; inset: 0;
+    background: var(--cream); color: var(--orange);
+    display: grid; place-items: center; align-content: center; gap: 4vh;
+    text-align: center;
+    clip-path: circle(0% at 50% 50%);
+    transition: clip-path .7s var(--ease);
+    pointer-events: none;
+  }
+  body.alarming .alarm { clip-path: circle(150% at 50% 50%); pointer-events: auto; }
+  .alarm .a-time {
+    font-family: var(--latin); font-weight: 800; font-variation-settings: "wdth" 118;
+    font-size: min(24vw, 40vh); line-height: .85; letter-spacing: -.02em;
+  }
+  .alarm .a-label { font-size: clamp(30px, 4.6vw, 64px); font-weight: 900; color: var(--orange-ink); max-width: 80vw; overflow-wrap: anywhere; }
+  .alarm .a-actions { display: flex; gap: 18px; margin-top: 2vh; }
+  .alarm button {
+    min-width: 200px; min-height: 72px; border-radius: 999px;
+    font-size: 24px; font-weight: 900; letter-spacing: .06em;
+    transition: transform .25s var(--ease);
+  }
+  .alarm button:active { transform: scale(.96); }
+  .alarm .ok { background: var(--orange); color: var(--cream); border: 0; }
+  .alarm .snooze { background: transparent; color: var(--orange); border: 3px solid var(--orange); }
+  .alarm :focus-visible { outline-color: var(--orange); }
+  body.alarming .alarm .a-time { animation: pulse 1.2s var(--ease) infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+
+  /* Portrait: stack and shrink */
+  @media (orientation: portrait) {
+    .time { font-size: min(30vw, 34vh); flex-wrap: wrap; justify-content: center; }
+    .seconds { flex-basis: 100%; text-align: center; margin: .3em 0 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .01ms !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+  <main class="stage" id="stage">
+    <header class="top">
+      <div><span id="date">—</span><span class="weekday" id="weekday"></span></div>
+      <div class="ampm" id="ampm" aria-hidden="true"></div>
+    </header>
+
+    <div class="time" id="time" role="timer" aria-live="off" aria-label="目前時間">
+      <span class="digit" id="h1">0</span><span class="digit" id="h2">0</span><span class="colon" id="colon">:</span><span class="digit" id="m1">0</span><span class="digit" id="m2">0</span>
+      <span class="seconds" id="secWrap"><span class="digit" id="s1">0</span><span class="digit" id="s2">0</span></span>
+    </div>
+
+    <footer class="bottom">
+      <div class="next empty" id="next">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span id="nextText">尚未設定提醒</span>
+      </div>
+      <div class="actions">
+        <button class="icon-btn" id="fsBtn" aria-label="全螢幕">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
+        <button class="icon-btn" id="openSettings" aria-label="設定提醒" aria-controls="sheet" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3 2 6"/><path d="m22 6-3-3"/></svg>
+        </button>
+      </div>
+    </footer>
+  </main>
+
+  <div class="hint" id="hint" hidden>輕點畫面一下，啟用提醒聲音與螢幕常亮</div>
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="sheet" id="sheet" aria-label="提醒設定" aria-hidden="true">
+    <div class="sheet-head">
+      <h2>提醒</h2>
+      <button class="close" id="closeSettings" aria-label="關閉">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+
+    <form class="add" id="addForm" autocomplete="off">
+      <div class="row">
+        <label class="field" style="flex:0 0 46%">
+          <span>時間</span>
+          <input type="time" id="inTime" required />
+        </label>
+        <label class="field">
+          <span>內容（選填）</span>
+          <input type="text" id="inLabel" maxlength="24" placeholder="例如：喝水" />
+        </label>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="重複">
+        <label><input type="radio" name="rep" value="daily" checked /><span>每天</span></label>
+        <label><input type="radio" name="rep" value="once" /><span>只響一次</span></label>
+      </div>
+      <button class="primary" type="submit">加入提醒</button>
+    </form>
+
+    <div class="list-title"><h3>已設定</h3><small id="count"></small></div>
+    <ul class="list" id="list"></ul>
+
+    <div class="prefs">
+      <div class="pref">
+        <span>24 小時制</span>
+        <button class="switch" id="sw24" role="switch" aria-checked="true" aria-label="24 小時制"></button>
+      </div>
+      <div class="pref">
+        <span>提醒聲音</span>
+        <button class="test-btn" id="testBtn" type="button">試聽</button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="alarm" id="alarm" role="alertdialog" aria-modal="true" aria-labelledby="aLabel" aria-hidden="true">
+    <div class="a-time" id="aTime">00:00</div>
+    <div class="a-label" id="aLabel">提醒時間到了</div>
+    <div class="a-actions">
+      <button class="snooze" id="snoozeBtn">再 5 分鐘</button>
+      <button class="ok" id="okBtn">知道了</button>
+    </div>
+  </section>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const pad = (n) => String(n).padStart(2, "0");
+  const WEEK = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+  const KEY = "orange-clock-v1";
+
+  // ── Storage (safe) ──
+  const load = () => {
+    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
+  };
+  const state = Object.assign({ reminders: [], h24: true }, load());
+  const save = () => {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+  };
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const todayKey = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+
+  // ── Clock rendering ──
+  const els = { h1: $("h1"), h2: $("h2"), m1: $("m1"), m2: $("m2"), s1: $("s1"), s2: $("s2") };
+  const set = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+
+  function fmtHM(h, m) {
+    if (state.h24) return `${pad(h)}:${pad(m)}`;
+    const hh = h % 12 || 12;
+    return `${hh}:${pad(m)}`;
+  }
+
+  function render(now) {
+    let h = now.getHours();
+    const m = now.getMinutes(), s = now.getSeconds();
+    let ap = "";
+    if (!state.h24) { ap = h < 12 ? "AM" : "PM"; h = h % 12 || 12; }
+    const hs = pad(h);
+    set(els.h1, state.h24 || h >= 10 ? hs[0] : "");
+    els.h1.style.display = (!state.h24 && h < 10) ? "none" : "";
+    set(els.h2, hs[1]);
+    set(els.m1, pad(m)[0]); set(els.m2, pad(m)[1]);
+    set(els.s1, pad(s)[0]); set(els.s2, pad(s)[1]);
+    $("colon").classList.toggle("dim", s % 2 === 1);
+    $("ampm").textContent = state.h24 ? "" : (ap === "AM" ? "上午 AM" : "下午 PM");
+    set($("date"), `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日`);
+    set($("weekday"), WEEK[now.getDay()]);
+    $("time").setAttribute("aria-label", `目前時間 ${fmtHM(now.getHours(), m)}`);
+  }
+
+  // ── Reminder logic ──
+  function minutesOf(t) { const [h, m] = t.split(":").map(Number); return h * 60 + m; }
+
+  function nextReminder(now) {
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    let best = null;
+    for (const r of state.reminders) {
+      if (!r.on) continue;
+      if (r.snoozeUntil && r.snoozeUntil > Date.now()) {
+        const d = new Date(r.snoozeUntil);
+        const delta = (r.snoozeUntil - now.getTime()) / 60000;
+        if (!best || delta < best.delta) best = { r, delta, at: fmtHM(d.getHours(), d.getMinutes()), tomorrow: false };
+        continue;
+      }
+      let delta = minutesOf(r.time) - nowMin;
+      const firedToday = r.lastFired === todayKey(now);
+      if (delta < 0 || (delta === 0 && firedToday)) delta += 1440;
+      const [h, m] = r.time.split(":").map(Number);
+      if (!best || delta < best.delta) best = { r, delta, at: fmtHM(h, m), tomorrow: delta + nowMin >= 1440 };
+    }
+    return best;
+  }
+
+  function renderNext(now) {
+    const n = nextReminder(now);
+    const box = $("next"), txt = $("nextText");
+    if (!n) {
+      box.classList.add("empty");
+      txt.textContent = state.reminders.length ? "提醒皆已關閉" : "尚未設定提醒";
+      return;
+    }
+    box.classList.remove("empty");
+    const mins = Math.ceil(n.delta);
+    const rel = mins < 60 ? `${mins} 分鐘後` : `${Math.floor(mins / 60)} 小時 ${mins % 60} 分後`;
+    txt.innerHTML = "";
+    const when = document.createElement("span"); when.className = "when";
+    when.textContent = (n.tomorrow ? "明天 " : "") + n.at;
+    const lbl = document.createElement("span"); lbl.className = "lbl";
+    lbl.textContent = ` ${n.r.label ? n.r.label + " · " : ""}${rel}`;
+    txt.append(when, lbl);
+  }
+
+  let ringing = null;
+
+  function check(now) {
+    if (ringing) return;
+    const hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const key = todayKey(now);
+    for (const r of state.reminders) {
+      if (!r.on) continue;
+      if (r.snoozeUntil) {
+        if (Date.now() >= r.snoozeUntil) { r.snoozeUntil = 0; save(); fire(r, now); return; }
+        continue;
+      }
+      if (r.time === hm && r.lastFired !== key) {
+        r.lastFired = key;
+        if (r.repeat === "once") r.on = false;
+        save();
+        fire(r, now);
+        return;
+      }
+    }
+  }
+
+  // ── Alarm takeover ──
+  function fire(r, now) {
+    ringing = r;
+    $("aTime").textContent = fmtHM(now.getHours(), now.getMinutes());
+    $("aLabel").textContent = r.label || "提醒時間到了";
+    document.body.classList.add("alarming");
+    $("alarm").setAttribute("aria-hidden", "false");
+    closeSettings();
+    startTone();
+    if (navigator.vibrate) navigator.vibrate([400, 200, 400]);
+    setTimeout(() => $("okBtn").focus(), 400);
+    autoStop = setTimeout(dismiss, 3 * 60 * 1000);
+    renderList();
+  }
+  let autoStop = 0;
+  function dismiss() {
+    clearTimeout(autoStop);
+    stopTone();
+    ringing = null;
+    document.body.classList.remove("alarming");
+    $("alarm").setAttribute("aria-hidden", "true");
+    tick();
+  }
+  $("okBtn").onclick = dismiss;
+  $("snoozeBtn").onclick = () => {
+    const r = state.reminders.find((x) => x.id === ringing?.id);
+    if (r) { r.on = true; r.snoozeUntil = Date.now() + 5 * 60 * 1000; save(); }
+    dismiss();
+    renderList();
+  };
+
+  // ── Sound (Web Audio, unlocked on first tap) ──
+  let ctx = null, toneTimer = 0;
+  function ensureAudio() {
+    try {
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === "suspended") ctx.resume();
+    } catch {}
+    return ctx;
+  }
+  function chime() {
+    const c = ensureAudio(); if (!c) return;
+    const t0 = c.currentTime;
+    [880, 1318.5, 1760].forEach((f, i) => {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      const t = t0 + i * 0.16;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      o.connect(g).connect(c.destination);
+      o.start(t); o.stop(t + 0.65);
+    });
+  }
+  function startTone() { chime(); clearInterval(toneTimer); toneTimer = setInterval(chime, 1400); }
+  function stopTone() { clearInterval(toneTimer); }
+  $("testBtn").onclick = () => chime();
+
+  // ── Wake lock & unlock hint ──
+  let wakeLock = null, unlocked = false;
+  async function keepAwake() {
+    try {
+      if ("wakeLock" in navigator && !wakeLock && document.visibilityState === "visible") {
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLock.addEventListener("release", () => { wakeLock = null; });
+      }
+    } catch {}
+  }
+  function unlock() {
+    if (unlocked) return;
+    unlocked = true;
+    const c = ensureAudio();
+    // a silent blip to fully unlock iOS audio
+    try { const o = c.createOscillator(), g = c.createGain(); g.gain.value = 0.0001; o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime + 0.05); } catch {}
+    keepAwake();
+    $("hint").hidden = true;
+  }
+  document.addEventListener("pointerdown", unlock, { capture: true });
+  document.addEventListener("keydown", unlock, { capture: true });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { keepAwake(); tick(); } });
+  setTimeout(() => { if (!unlocked) $("hint").hidden = false; }, 600);
+  setTimeout(() => { $("hint").hidden = true; }, 12000);
+
+  // ── Fullscreen ──
+  const fsEl = document.documentElement;
+  const canFs = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen;
+  if (!canFs) $("fsBtn").style.display = "none";
+  $("fsBtn").onclick = () => {
+    const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+    try {
+      if (isFs) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else canFs.call(fsEl);
+    } catch {}
+  };
+
+  // ── Settings sheet ──
+  function openSettings() {
+    document.body.classList.add("settings-open");
+    $("sheet").setAttribute("aria-hidden", "false");
+    $("openSettings").setAttribute("aria-expanded", "true");
+    if (!$("inTime").value) {
+      const d = new Date(Date.now() + 60 * 60 * 1000);
+      $("inTime").value = `${pad(d.getHours())}:00`;
+    }
+  }
+  function closeSettings() {
+    document.body.classList.remove("settings-open");
+    $("sheet").setAttribute("aria-hidden", "true");
+    $("openSettings").setAttribute("aria-expanded", "false");
+  }
+  $("openSettings").onclick = openSettings;
+  $("closeSettings").onclick = closeSettings;
+  $("scrim").onclick = closeSettings;
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { if (ringing) dismiss(); else closeSettings(); }
+  });
+
+  $("addForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const time = $("inTime").value;
+    if (!/^\d{2}:\d{2}$/.test(time)) { $("inTime").focus(); return; }
+    const repeat = document.querySelector('input[name="rep"]:checked').value;
+    state.reminders.push({ id: uid(), time, label: $("inLabel").value.trim(), repeat, on: true, lastFired: "" });
+    state.reminders.sort((a, b) => minutesOf(a.time) - minutesOf(b.time));
+    save();
+    $("inLabel").value = "";
+    renderList(); tick();
+  });
+
+  function renderList() {
+    const ul = $("list");
+    ul.innerHTML = "";
+    $("count").textContent = state.reminders.length ? `${state.reminders.filter((r) => r.on).length} / ${state.reminders.length} 個啟用中` : "";
+    if (!state.reminders.length) {
+      const li = document.createElement("li");
+      li.className = "empty-list"; li.style.display = "block"; li.style.border = "0";
+      li.textContent = "還沒有提醒。在上方選好時間，按「加入提醒」即可。";
+      ul.append(li);
+      return;
+    }
+    for (const r of state.reminders) {
+      const li = document.createElement("li");
+      if (!r.on) li.classList.add("off");
+      const [h, m] = r.time.split(":").map(Number);
+      const left = document.createElement("div");
+      const t = document.createElement("div"); t.className = "t"; t.textContent = fmtHM(h, m) + (state.h24 ? "" : (h < 12 ? " AM" : " PM"));
+      const meta = document.createElement("span"); meta.className = "meta";
+      const snoozed = r.snoozeUntil && r.snoozeUntil > Date.now();
+      meta.textContent = [r.label, r.repeat === "daily" ? "每天" : "只響一次", snoozed ? "貪睡中" : ""].filter(Boolean).join(" · ");
+      left.append(t, meta);
+
+      const sw = document.createElement("button");
+      sw.className = "switch"; sw.setAttribute("role", "switch");
+      sw.setAttribute("aria-checked", String(!!r.on));
+      sw.setAttribute("aria-label", `${r.time} ${r.on ? "已啟用" : "已關閉"}`);
+      sw.onclick = () => {
+        r.on = !r.on; r.snoozeUntil = 0;
+        if (r.on && r.repeat === "once") r.lastFired = "";
+        save(); renderList(); tick();
+      };
+
+      const del = document.createElement("button");
+      del.className = "del"; del.setAttribute("aria-label", `刪除 ${r.time} 的提醒`);
+      del.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>';
+      del.onclick = () => {
+        state.reminders = state.reminders.filter((x) => x.id !== r.id);
+        save(); renderList(); tick();
+      };
+      li.append(left, sw, del);
+      ul.append(li);
+    }
+  }
+
+  const sw24 = $("sw24");
+  sw24.setAttribute("aria-checked", String(state.h24));
+  sw24.onclick = () => {
+    state.h24 = !state.h24;
+    sw24.setAttribute("aria-checked", String(state.h24));
+    save(); renderList(); tick();
+  };
+
+  // ── Tick, aligned to the wall-clock second ──
+  function tick() {
+    const now = new Date();
+    render(now);
+    check(now);
+    renderNext(now);
+  }
+  function loop() {
+    tick();
+    setTimeout(loop, 1000 - (Date.now() % 1000) + 5);
+  }
+  renderList();
+  loop();
+})();
+</script>
+</body>
+</html>
