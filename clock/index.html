@@ -30,7 +30,10 @@
     --orange: #D9500F;
     --orange-deep: #B8420B;
     --orange-ink: #7A2A05;
-    --orange-recess: #C4470D; /* orange under the 22% shade: what shows behind the receding clock */
+    --orange-recess: #C4470D;
+    --key: #B8420B;          /* digit keys: deep orange, cream numerals ≈ 5:1 */
+    --key-press: #9E380A;
+    --cream-press: #E9DCC6; /* orange under the 22% shade: what shows behind the receding clock */
     --cream: #F7EFE2;
     --cream-dim: rgba(247, 239, 226, .93);
     --cream-line: rgba(247, 239, 226, .28);
@@ -142,6 +145,55 @@
   .notice { gap: 3vh; z-index: 2; }
   .wave { position: absolute; inset: 0; z-index: 1; background: var(--orange-deep); visibility: hidden; pointer-events: none; }
   .pager.moving .page, .pager.moving .wave, .pager.moving .n-items li { will-change: transform, clip-path; }
+
+  /* ─── Calculator page: keypad left, readout right (clear of the fixed buttons) ─── */
+  .calc {
+    z-index: 2;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: 4vw;
+    padding-bottom: calc(var(--pad-b) + 84px);
+  }
+  .c-keys {
+    display: grid; min-height: 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    gap: clamp(10px, 1.3vw, 16px);
+  }
+  .c-key {
+    border: 0; border-radius: clamp(16px, 1.9vw, 24px);
+    background: var(--key); color: var(--cream);
+    font-family: var(--latin); font-weight: 700; font-variation-settings: "wdth" 110;
+    font-size: clamp(28px, 3.3vw, 46px); line-height: 1;
+    display: grid; place-items: center;
+    touch-action: manipulation;
+    transition: transform .12s var(--ease), background-color .12s var(--ease), color .12s var(--ease);
+  }
+  .c-key svg { width: 1.05em; height: 1.05em; }
+  .c-key:active { transform: scale(.95); background: var(--key-press); }
+  .c-key.fn { background: transparent; box-shadow: inset 0 0 0 2px var(--cream-line); }
+  .c-key.fn:active { background: rgba(247, 239, 226, .14); }
+  .c-key.op, .c-key.eq { background: var(--cream); color: var(--orange); font-size: clamp(34px, 4vw, 56px); font-weight: 600; }
+  .c-key.op:active, .c-key.eq:active { background: var(--cream-press); }
+  .c-key.op[aria-pressed="true"] { background: var(--orange-ink); color: var(--cream); }
+  .c-key.eq { grid-row: span 2; color: var(--orange-ink); }
+  .c-display {
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end;
+    gap: 1.2vh; min-width: 0; padding-bottom: 1vh; text-align: right;
+  }
+  .c-expr {
+    font-family: var(--latin); font-weight: 600; font-variation-settings: "wdth" 104;
+    font-size: clamp(24px, 2.7vw, 36px); color: var(--cream-dim);
+    white-space: nowrap; overflow: hidden; max-width: 100%; min-height: 1.25em;
+    font-variant-numeric: tabular-nums;
+  }
+  .c-out {
+    display: block; max-width: 100%;
+    font-family: var(--latin); font-weight: 800; font-variation-settings: "wdth" 116;
+    font-size: var(--out-size, min(10vw, 19vh)); line-height: 1; letter-spacing: -.01em;
+    white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  .c-out.err { font-family: var(--han); font-weight: 900; font-size: clamp(36px, 4.6vw, 64px); }
   .n-head { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; min-width: 0; }
   .n-head h1 {
     margin: 0; min-width: 0;
@@ -418,6 +470,8 @@
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 
   @media (orientation: portrait) {
+    .calc { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); row-gap: 3vh; }
+    .calc .c-display { order: -1; }
     .time { font-size: min(30vw, 34vh); flex-wrap: wrap; justify-content: center; }
     .seconds { flex-basis: 100%; text-align: center; margin: .3em 0 0; }
     .bottom, .n-foot { padding-right: 0; padding-bottom: 80px; }
@@ -456,6 +510,35 @@
 
       <div class="wave" id="wave" aria-hidden="true"></div>
 
+      <!-- Page 0 (left of the clock): calculator -->
+      <section class="page calc" id="pCalc" aria-label="計算機" aria-hidden="true">
+        <div class="c-keys" id="cKeys">
+          <button class="c-key fn" data-k="C" aria-label="清除">C</button>
+          <button class="c-key fn" data-k="back" aria-label="刪除一位"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 5h10a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H10l-7-7z"/><path d="m18 9-6 6"/><path d="m12 9 6 6"/></svg></button>
+          <button class="c-key op" data-k="÷" aria-label="除">÷</button>
+          <button class="c-key op" data-k="×" aria-label="乘">×</button>
+          <button class="c-key" data-k="7">7</button>
+          <button class="c-key" data-k="8">8</button>
+          <button class="c-key" data-k="9">9</button>
+          <button class="c-key op" data-k="−" aria-label="減">−</button>
+          <button class="c-key" data-k="4">4</button>
+          <button class="c-key" data-k="5">5</button>
+          <button class="c-key" data-k="6">6</button>
+          <button class="c-key op" data-k="+" aria-label="加">+</button>
+          <button class="c-key" data-k="1">1</button>
+          <button class="c-key" data-k="2">2</button>
+          <button class="c-key" data-k="3">3</button>
+          <button class="c-key eq" data-k="=" aria-label="等於">=</button>
+          <button class="c-key" data-k="0">0</button>
+          <button class="c-key" data-k="00">00</button>
+          <button class="c-key" data-k="." aria-label="小數點">.</button>
+        </div>
+        <div class="c-display">
+          <div class="c-expr" id="cExpr" aria-hidden="true"></div>
+          <output class="c-out" id="cOut" aria-live="polite">0</output>
+        </div>
+      </section>
+
       <!-- Page 2: price notice -->
       <section class="page notice" id="pNotice" aria-label="告示" aria-hidden="true">
         <header class="n-head">
@@ -469,6 +552,7 @@
   </div>
 
   <nav class="dots" aria-label="切換畫面">
+    <button id="dotC" aria-label="計算機" aria-current="false"></button>
     <button id="dot0" aria-label="時鐘" aria-current="true"></button>
     <button id="dot1" aria-label="告示" aria-current="false"></button>
   </nav>
@@ -482,7 +566,7 @@
     </button>
   </div>
 
-  <div class="hint gone" id="hint">輕點畫面一下，啟用提醒聲音與螢幕常亮・左右滑動切換告示</div>
+  <div class="hint gone" id="hint">輕點畫面一下，啟用提醒聲音與螢幕常亮・左右滑動切換告示與計算機</div>
 
   <div class="scrim" id="scrim"></div>
   <aside class="sheet" id="sheet" aria-label="設定" aria-hidden="true">
@@ -782,94 +866,109 @@
   };
 
   // ── Pages & swipe ──
-  // pos: 0 = clock, 1 = notice. The finger drives pos directly while dragging;
-  // on release a critically damped spring carries it home, keeping the release velocity.
-  // The notice is revealed through a liquid edge: a smooth curve that bulges toward
-  // the finger and ripples while moving, with a darker wave running just ahead of it.
-  const pager = $("pager"), clockEl = $("pClock"), noticeEl = $("pNotice"), shade = $("shade"), wave = $("wave");
+  // Three pages on one line: calculator (-1) · clock (0) · price notice (1).
+  // pos is continuous; the finger drives it while dragging, and a critically damped
+  // spring carries it home on release, keeping the release velocity.
+  // The side pages pour in over the clock through a liquid edge (clip-path) that
+  // bulges toward the finger and ripples while moving, led by a darker wave.
+  // The notice comes from the right; the calculator is its mirror image from the left.
+  const pager = $("pager"), clockEl = $("pClock"), noticeEl = $("pNotice"), calcEl = $("pCalc");
+  const shade = $("shade"), wave = $("wave");
+  const PAGES = { "-1": calcEl, "0": clockEl, "1": noticeEl };
+  const DOTS = { "-1": $("dotC"), "0": $("dot0"), "1": $("dot1") };
   const reduceMQ = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
-  let page = state.page === 1 ? 1 : 0;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  let page = [-1, 0, 1].includes(state.page) ? state.page : 0;
   let pos = page, vel = 0, target = page, edge = 0, raf = 0, last = 0;
-  let anchorY = window.innerHeight / 2, dir = 1, drag = null;
+  let anchorY = window.innerHeight / 2, dir = 1, drag = null, suppressClick = false;
 
-  // Smooth closed shape: everything right of the curve x = f(y), as an SVG path.
-  function liquidPath(w, h, f) {
+  // Smooth closed shape right of the curve x = f(y) (or, mirrored, left of w - f(y)), as an SVG path.
+  function liquidPath(w, h, f, mirror) {
+    const X = (x) => (mirror ? w - x : x).toFixed(1);
     const N = 18, pts = [];
     for (let i = 0; i <= N; i++) { const y = (i / N) * h; pts.push([f(y), y]); }
-    let d = `M${w + 4},-4 L${pts[0][0].toFixed(1)},-4 L${pts[0][0].toFixed(1)},0`;
+    let d = `M${X(w + 4)},-4 L${X(pts[0][0])},-4 L${X(pts[0][0])},0`;
     for (let i = 0; i < N; i++) {           // Catmull-Rom through the samples, as cubic Béziers
       const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
       const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
       const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-      d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+      d += ` C${X(c1x)},${c1y.toFixed(1)} ${X(c2x)},${c2y.toFixed(1)} ${X(p2[0])},${p2[1].toFixed(1)}`;
     }
-    return d + ` L${pts[N][0].toFixed(1)},${h + 4} L${w + 4},${h + 4} Z`;
+    return d + ` L${X(pts[N][0])},${h + 4} L${X(w + 4)},${h + 4} Z`;
+  }
+
+  // Edge curve for a side page at progress p (0 hidden … 1 covering the clock).
+  function edgeFn(p, w, h, sgn, now, lead, amp, phase, extra) {
+    const swell = Math.sin(Math.PI * p);                 // 0 at rest, 1 mid-way
+    const bulge = Math.min(w * 0.2, 220) * swell * sgn;   // lobe leads in the direction of travel
+    const R = h * 0.34, t = now / 1000;
+    const edgeX = (1 - p) * (w + 40) - 20 * swell;
+    return (y) => {
+      const g = Math.exp(-(((y - anchorY) / R) ** 2));
+      const ripple = amp * swell * Math.sin((y / h) * Math.PI * 3 + t * 5 + phase);
+      return edgeX - lead * swell - bulge * g * (1 + extra) - ripple;
+    };
+  }
+
+  function paintSide(el, p, mirror, w, h, now) {
+    if (p >= 0.999) { el.style.clipPath = ""; el.style.visibility = "visible"; return false; }
+    if (p <= 0.0005) { el.style.visibility = "hidden"; return false; }
+    // Travelling toward this page: dir > 0 for the notice, dir < 0 for the calculator.
+    const sgn = mirror ? -dir : dir;
+    el.style.visibility = "visible";
+    el.style.clipPath = `path("${liquidPath(w, h, edgeFn(p, w, h, sgn, now, 0, 12, 0, 0), mirror)}")`;
+    wave.style.clipPath = `path("${liquidPath(w, h, edgeFn(p, w, h, sgn, now, 34, 16, 1.4, 0.12), mirror)}")`;
+    return true;
   }
 
   function paint(now = performance.now()) {
     const w = window.innerWidth, h = window.innerHeight;
-    const p = Math.min(1, Math.max(0, pos));
+    const pn = clamp(pos, 0, 1), pc = clamp(-pos, 0, 1), pa = Math.max(pn, pc);
     if (reduceMQ.matches) {
-      clockEl.style.transform = noticeEl.style.transform = noticeEl.style.clipPath = "";
-      noticeEl.style.opacity = p >= 0.5 ? "1" : "0";
-      noticeEl.style.visibility = p >= 0.5 ? "visible" : "hidden";
+      const near = Math.round(pos);
+      for (const el of [noticeEl, calcEl]) {
+        const on = PAGES[near] === el;
+        el.style.transform = el.style.clipPath = "";
+        el.style.opacity = on ? "1" : "0";
+        el.style.visibility = on ? "visible" : "hidden";
+      }
+      clockEl.style.transform = "";
       wave.style.visibility = "hidden";
       shade.style.opacity = "0";
     } else {
-      noticeEl.style.opacity = "";
-      clockEl.style.transform = `translate3d(${-p * w * 0.12}px,0,0) scale(${1 - 0.05 * p})`;
-      shade.style.opacity = String(0.22 * p);
-
-      const swell = Math.sin(Math.PI * p);                 // 0 at rest, 1 mid-way
-      const bulge = Math.min(w * 0.2, 220) * swell * dir;   // lobe leads in the direction of travel
-      const R = h * 0.34;
-      const t = now / 1000;
-      const edgeX = (1 - p) * (w + 40) - 20 * swell;
-      const f = (lead, amp, phase) => (y) => {
-        const g = Math.exp(-(((y - anchorY) / R) ** 2));
-        const ripple = amp * swell * Math.sin((y / h) * Math.PI * 3 + t * 5 + phase);
-        return edgeX - lead * swell - bulge * g - ripple;
-      };
-      if (p >= 0.999) {
-        noticeEl.style.clipPath = "";
-        noticeEl.style.visibility = "visible";
-        wave.style.visibility = "hidden";
-      } else if (p <= 0.0005) {
-        noticeEl.style.visibility = "hidden";
-        wave.style.visibility = "hidden";
-      } else {
-        noticeEl.style.visibility = "visible";
-        noticeEl.style.clipPath = `path("${liquidPath(w, h, f(0, 12, 0))}")`;
-        wave.style.visibility = "visible";
-        wave.style.clipPath = `path("${liquidPath(w, h, (y) => f(34, 16, 1.4)(y) - bulge * 0.12 * Math.exp(-(((y - anchorY) / R) ** 2)))}")`;
-      }
-      // Content flows in after the edge: title first, then each row a beat later.
-      const lag = (1 - p) * w;
-      $("nTitle").parentElement.style.transform = `translate3d(${lag * 0.1}px,0,0)`;
-      [...$("nItems").children].forEach((li, i) => {
-        li.style.transform = `translate3d(${lag * (0.14 + 0.03 * i)}px,0,0)`;
-      });
-      $("nNote").style.transform = `translate3d(${lag * 0.3}px,0,0)`;
+      noticeEl.style.opacity = calcEl.style.opacity = "";
+      clockEl.style.transform = `translate3d(${(pc - pn) * w * 0.12}px,0,0) scale(${1 - 0.05 * pa})`;
+      shade.style.opacity = String(0.22 * pa);
+      const waving = paintSide(noticeEl, pn, false, w, h, now) | paintSide(calcEl, pc, true, w, h, now);
+      wave.style.visibility = waving ? "visible" : "hidden";
+      // Content is revealed as the edge passes: each row lags a beat behind the one above.
+      const lagN = (1 - pn) * w, lagC = (1 - pc) * w;
+      $("nTitle").parentElement.style.transform = `translate3d(${lagN * 0.1}px,0,0)`;
+      [...$("nItems").children].forEach((li, i) => { li.style.transform = `translate3d(${lagN * (0.14 + 0.03 * i)}px,0,0)`; });
+      $("nNote").style.transform = `translate3d(${lagN * 0.3}px,0,0)`;
+      $("cKeys").style.transform = `translate3d(${-lagC * 0.14}px,0,0)`;
+      document.querySelector(".c-display").style.transform = `translate3d(${-lagC * 0.24}px,0,0)`;
     }
-    const onClock = p < 0.5;
-    clockEl.style.setProperty("--edge", onClock ? `${edge}px` : "0px");
-    noticeEl.style.setProperty("--edge", onClock ? "0px" : `${edge}px`);
-    // Indicator: the pill stretches between the dots with the finger.
-    $("dot0").style.setProperty("--w", `${32 - 20 * p}px`);
-    $("dot0").style.setProperty("--o", String(1 - 0.7 * p));
-    $("dot1").style.setProperty("--w", `${12 + 20 * p}px`);
-    $("dot1").style.setProperty("--o", String(0.3 + 0.7 * p));
+    const near = Math.round(clamp(pos, -1, 1));
+    for (const k of ["-1", "0", "1"]) PAGES[k].style.setProperty("--edge", Number(k) === near ? `${edge}px` : "0px");
+    // Indicator: the pill stretches between dots with the finger.
+    for (const k of ["-1", "0", "1"]) {
+      const d = 1 - Math.min(1, Math.abs(pos - Number(k)));
+      DOTS[k].style.setProperty("--w", `${12 + 20 * d}px`);
+      DOTS[k].style.setProperty("--o", String(0.3 + 0.7 * d));
+    }
   }
 
   function settle() {
     pager.classList.remove("moving");
     const changed = page !== target;
     page = target;
-    clockEl.setAttribute("aria-hidden", String(page !== 0));
-    noticeEl.setAttribute("aria-hidden", String(page !== 1));
-    clockEl.inert = page !== 0; noticeEl.inert = page !== 1;
-    $("dot0").setAttribute("aria-current", String(page === 0));
-    $("dot1").setAttribute("aria-current", String(page === 1));
+    for (const k of ["-1", "0", "1"]) {
+      const on = Number(k) === page;
+      PAGES[k].setAttribute("aria-hidden", String(!on));
+      PAGES[k].inert = !on;
+      DOTS[k].setAttribute("aria-current", String(on));
+    }
     if (changed) { state.page = page; save(); }
   }
 
@@ -897,26 +996,25 @@
   }
 
   function animateTo(t, v0 = vel) {
-    target = Math.max(0, Math.min(1, t));
+    target = clamp(Math.round(t), -1, 1);
     if (target !== pos) dir = target > pos ? 1 : -1;
     if (reduceMQ.matches) { pos = target; vel = 0; edge = 0; paint(); settle(); return; }
     vel = v0;
     run();
   }
   const go = (p) => { anchorY = window.innerHeight / 2; animateTo(p, 0); };
-  $("dot0").onclick = () => go(0);
-  $("dot1").onclick = () => go(1);
+  for (const k of ["-1", "0", "1"]) DOTS[k].onclick = () => go(Number(k));
 
   const blocked = () => ringing || document.body.classList.contains("settings-open");
   pager.addEventListener("pointerdown", (e) => {
     if (blocked() || e.button > 0) return;
-    drag = { x: e.clientX, y: e.clientY, startPos: pos, active: false, samples: [[e.clientX, e.timeStamp]] };
+    drag = { x: e.clientX, y: e.clientY, startPos: pos, from: Math.round(pos), active: false, samples: [[e.clientX, e.timeStamp]] };
   });
   window.addEventListener("pointermove", (e) => {
     if (!drag) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (!drag.active) {
-      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { drag.active = true; vel = 0; run(); }
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) { drag.active = true; vel = 0; run(); }
       else if (Math.abs(dy) > 14) { drag = null; return; }
       else return;
     }
@@ -924,11 +1022,12 @@
     if (drag.samples.length > 5) drag.samples.shift();
     anchorY += (e.clientY - anchorY) * 0.5;      // the bulge follows the finger, softly
     const raw = drag.startPos - dx / window.innerWidth;
-    const next = Math.max(0, Math.min(1, raw));
+    // One page per gesture; past either end the content rubber-bands instead.
+    const lo = Math.max(-1, drag.from - 1), hi = Math.min(1, drag.from + 1);
+    const next = clamp(raw, lo, hi);
     if (next !== pos) dir = next > pos ? 1 : -1;
     pos = next;
-    // Rubber band past either end: the content resists instead of the card leaving.
-    const over = (raw - pos) * -window.innerWidth;
+    const over = raw < -1 ? (raw + 1) * -window.innerWidth : raw > 1 ? (raw - 1) * -window.innerWidth : 0;
     edge = over === 0 ? 0 : Math.sign(over) * Math.min(80, Math.abs(over) * 0.35);
     if (reduceMQ.matches) { cancelAnimationFrame(raf); raf = 0; }
   });
@@ -936,19 +1035,133 @@
     if (!drag) return;
     const d = drag; drag = null;
     if (!d.active) return;
+    suppressClick = true; setTimeout(() => { suppressClick = false; }, 0);   // a swipe is not a key press
     const [x0, t0] = d.samples[0], [x1, t1] = d.samples[d.samples.length - 1];
     const stale = e && e.timeStamp - t1 > 80;                   // finger paused before lifting
     const vpx = !stale && t1 > t0 ? (x1 - x0) / (t1 - t0) : 0;  // px per ms, + = rightward
     const v = (-vpx * 1000) / window.innerWidth;                 // pos units per second
     let next;
-    if (Math.abs(vpx) > 0.35) next = vpx < 0 ? 1 : 0;            // a flick decides on its own
-    else next = pos + v * 0.12 > 0.5 ? 1 : 0;
-    animateTo(next, Math.abs(vpx) > 0.35 ? v : 0);
+    if (Math.abs(vpx) > 0.35) next = d.from + (vpx < 0 ? 1 : -1); // a flick decides on its own
+    else next = Math.round(pos + v * 0.12);
+    animateTo(clamp(next, Math.max(-1, d.from - 1), Math.min(1, d.from + 1)), Math.abs(vpx) > 0.35 ? v : 0);
   };
   window.addEventListener("pointerup", endDrag);
   window.addEventListener("pointercancel", endDrag);
-  window.addEventListener("resize", () => paint());
+  pager.addEventListener("click", (e) => { if (suppressClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+  window.addEventListener("resize", () => { paint(); fitOut(); });
   if (reduceMQ.addEventListener) reduceMQ.addEventListener("change", () => paint());
+
+  // ── Calculator (+ − × ÷ with the usual precedence) ──
+  const calc = { tokens: [], cur: "0", done: false, error: "", lastExpr: "" };
+  const OPS = ["+", "−", "×", "÷"];
+  const MAX_DIGITS = 12;
+
+  function fmtNum(str) {
+    if (str === "" || str == null) return "";
+    if (/e/i.test(str)) return str;
+    const neg = str.startsWith("-");
+    const [i, f] = str.replace("-", "").split(".");
+    const int = (i || "0").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (neg ? "−" : "") + int + (f !== undefined ? "." + f : "");
+  }
+  function numStr(n) {
+    if (!isFinite(n)) return "Error";
+    const r = parseFloat(n.toPrecision(12));       // hides 0.1 + 0.2 style float noise
+    if (Math.abs(r) >= 1e15 || (r !== 0 && Math.abs(r) < 1e-9)) return r.toExponential(6).replace(/\.?0+e/, "e");
+    return String(r);
+  }
+  function evaluate(list) {                         // [n, op, n, op, n …]
+    const nums = [parseFloat(list[0])], ops = [];
+    for (let i = 1; i < list.length; i += 2) {
+      const op = list[i], n = parseFloat(list[i + 1]);
+      if (op === "×" || op === "÷") {
+        if (op === "÷" && n === 0) throw new Error("div0");
+        const a = nums.pop();
+        nums.push(op === "×" ? a * n : a / n);
+      } else { ops.push(op); nums.push(n); }
+    }
+    return ops.reduce((r, op, i) => (op === "+" ? r + nums[i + 1] : r - nums[i + 1]), nums[0]);
+  }
+  const exprText = (list) => list.map((t) => (OPS.includes(t) ? ` ${t} ` : fmtNum(t))).join("");
+
+  function fitOut() {
+    const out = $("cOut");
+    out.style.removeProperty("--out-size");
+    const box = out.parentElement.clientWidth;
+    if (out.scrollWidth > box && box > 0) {
+      const base = parseFloat(getComputedStyle(out).fontSize);
+      out.style.setProperty("--out-size", `${Math.floor(base * box / out.scrollWidth)}px`);
+    }
+  }
+  function renderCalc() {
+    const out = $("cOut"), ex = $("cExpr");
+    out.classList.toggle("err", !!calc.error);
+    if (calc.error) { out.textContent = calc.error; ex.textContent = calc.lastExpr; }
+    else {
+      out.textContent = fmtNum(calc.cur || calc.tokens[calc.tokens.length - 2] || "0");
+      let line = calc.done ? calc.lastExpr : (calc.tokens.length ? exprText([...calc.tokens, calc.cur]) : "");
+      if (line.length > 34) line = "…" + line.slice(-33);
+      ex.textContent = line || " ";
+    }
+    const pending = !calc.cur && calc.tokens.length ? calc.tokens[calc.tokens.length - 1] : "";
+    document.querySelectorAll(".c-key.op").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === pending)));
+    fitOut();
+  }
+  function press(k) {
+    if (calc.error && k !== "C") { calc.error = ""; calc.tokens = []; calc.cur = "0"; calc.done = false; if (OPS.includes(k) || k === "back" || k === "=") { renderCalc(); return; } }
+    if (/^\d+$/.test(k)) {
+      if (calc.done) { calc.tokens = []; calc.cur = ""; calc.done = false; }
+      const digits = calc.cur.replace(/[^\d]/g, "").length;
+      if (digits + k.length > MAX_DIGITS) return;
+      if (calc.cur === "0" || calc.cur === "") calc.cur = k === "00" ? "0" : k;
+      else calc.cur += k;
+    } else if (k === ".") {
+      if (calc.done) { calc.tokens = []; calc.cur = ""; calc.done = false; }
+      if (calc.cur.includes(".")) return;
+      calc.cur = (calc.cur || "0") + ".";
+    } else if (OPS.includes(k)) {
+      calc.done = false;
+      if (calc.cur === "") {
+        if (calc.tokens.length) calc.tokens[calc.tokens.length - 1] = k;   // change the operator
+        else { calc.tokens = ["0", k]; }
+      } else {
+        calc.tokens.push(calc.cur.replace(/\.$/, ""), k);
+        calc.cur = "";
+      }
+    } else if (k === "=") {
+      if (calc.done) return;
+      const list = [...calc.tokens];
+      if (calc.cur !== "") list.push(calc.cur.replace(/\.$/, ""));
+      else if (list.length) list.pop();                                   // drop a trailing operator
+      if (list.length < 3) { renderCalc(); return; }
+      calc.lastExpr = exprText(list) + " =";
+      try {
+        const r = numStr(evaluate(list));
+        if (r === "Error") throw new Error("overflow");
+        calc.cur = r; calc.tokens = []; calc.done = true;
+      } catch (err) {
+        calc.error = err.message === "div0" ? "無法除以 0" : "數字太大";
+        calc.tokens = []; calc.cur = ""; calc.done = false;
+      }
+    } else if (k === "C") {
+      calc.tokens = []; calc.cur = "0"; calc.done = false; calc.error = ""; calc.lastExpr = "";
+    } else if (k === "back") {
+      if (calc.done) { calc.lastExpr = ""; calc.done = false; }
+      else if (calc.cur !== "" && calc.cur !== "0") calc.cur = calc.cur.length > 1 ? calc.cur.slice(0, -1) : "0";
+      else if (calc.tokens.length) { calc.tokens.pop(); calc.cur = calc.tokens.pop() || "0"; }
+    }
+    renderCalc();
+  }
+  $("cKeys").addEventListener("click", (e) => {
+    const b = e.target.closest(".c-key");
+    if (b) press(b.dataset.k);
+  });
+  const KEYMAP = { "+": "+", "-": "−", "*": "×", "x": "×", "X": "×", "/": "÷", "Enter": "=", "=": "=", "Backspace": "back", "Delete": "C", ".": "." };
+  document.addEventListener("keydown", (e) => {
+    if (target !== -1 || blocked() || /INPUT|TEXTAREA/.test(document.activeElement?.tagName || "")) return;
+    const k = /^\d$/.test(e.key) ? e.key : KEYMAP[e.key];
+    if (k) { e.preventDefault(); press(k); }
+  });
 
   // ── Notice rendering ──
   function priceParts(p) {
@@ -1087,7 +1300,12 @@
   $("closeSettings").onclick = closeSettings;
   $("scrim").onclick = closeSettings;
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { if (ringing) dismiss(); else closeSettings(); return; }
+    if (e.key === "Escape") {
+      if (ringing) dismiss();
+      else if (document.body.classList.contains("settings-open")) closeSettings();
+      else if (target === -1) press("C");
+      return;
+    }
     if (blocked() || /INPUT|TEXTAREA/.test(document.activeElement?.tagName || "")) return;
     if (e.key === "ArrowRight") go(target + 1);
     if (e.key === "ArrowLeft") go(target - 1);
@@ -1170,6 +1388,7 @@
   }
 
   target = page; paint(); settle();
+  renderCalc();
   renderList();
   renderItems();
   renderNotice();
