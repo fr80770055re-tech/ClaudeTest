@@ -31,7 +31,7 @@ It runs on an iPad the class already has, as one page with no app install, accou
 ## Operating Context
 
 - **Viewing:** an iPad in landscape at the stall front, often read from 3 m or more, in a busy and possibly outdoor setting.
-- **Switching views:** swipe left or right between the clock and the price notice. The dots at the bottom and the arrow keys also switch.
+- **Switching views:** three pages in a row, calculator · clock · price notice. Swipe left from the clock for the notice and right for the calculator; the dots at the bottom and the arrow keys also switch.
 - **Editing:** the crew edits reminders and the price notice in the settings sheet, before or during the fair.
 - **Network:** may be unavailable at the venue, so the page must keep working offline.
 - **Language:** Traditional Chinese (zh-Hant-TW).
@@ -47,6 +47,7 @@ It runs on an iPad the class already has, as one page with no app install, accou
   - Prices: a whole number is shown with 元. Free text such as 2 杯 35 is shown as typed.
   - Layout: items switch to two columns above 6, and type size fits the screen.
   - Order: items can be moved up.
+- **Calculator:** for the crew to total orders. Supports + − × ÷ with normal precedence, plus C, delete one digit, 00 and decimals. Shows the expression above the result, and says 無法除以 0 when dividing by zero. Works with a hardware keyboard. Nothing is saved.
 - **Storage:** all settings are saved in localStorage on that iPad only.
 - **Display:** 24-hour or 12-hour time.
 - **iPadOS platform limits:**
