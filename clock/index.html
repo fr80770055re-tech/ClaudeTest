@@ -976,7 +976,7 @@
       DOTS[k].setAttribute("aria-current", String(on));
     }
     if (changed) { state.page = page; save(); }
-    if (reduceMQ.matches && typeof drawFloaters === "function") drawFloaters(performance.now());
+    if (reduceMQ.matches && typeof drawFloaters === "function") drawFloaters();
   }
 
   // One frame loop for both dragging (keeps the ripples flowing) and the spring.
@@ -1395,66 +1395,122 @@
     setTimeout(loop, 1000 - (Date.now() % 1000) + 5);
   }
 
-  // ── Ambient floaters: warm-black dots of mixed sizes drifting in the empty space ──
-  // Each page gets its own set. A floater loops slowly around an anchor, and an anchor
-  // is only accepted where its whole loop stays clear of that page's content (time,
-  // prices, readout, controls), so nothing ever drifts behind text. Drawn at 30 fps into
-  // the canvas behind each visible page; paused when hidden, still under reduced motion.
+  // ── Ambient dots: warm-black discs that drift and collide like billiard balls ──
+  // Each page has its own set. Dots move in straight lines, bounce elastically off each
+  // other (mass ∝ area, so a big dot shoves a small one) and off the screen edges and the
+  // page's content, which act as solid walls, so nothing ever drifts behind text.
+  // Simulated and drawn at ~30 fps for visible pages only; paused when hidden, still
+  // under reduced motion.
   const fx = {
     canvases: { "-1": calcEl.querySelector(".fx"), "0": clockEl.querySelector(".fx"), "1": noticeEl.querySelector(".fx") },
-    sets: { "-1": [], "0": [], "1": [] }, w: 0, h: 0, dpr: 1, lastDraw: 0, timer: 0,
+    sets: { "-1": [], "0": [], "1": [] }, walls: { "-1": [], "0": [], "1": [] },
+    w: 0, h: 0, dpr: 1, lastDraw: 0, timer: 0,
     color: getComputedStyle(document.documentElement).getPropertyValue("--floater").trim() || "#1A0B04",
   };
+  const GAP = 8;                                       // breathing room between dots and content
   // Box of el in its page's resting coordinates (offsets ignore the transition transforms).
   function restBox(el, pageEl) {
     let x = 0, y = 0, n = el;
     while (n && n !== pageEl) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
-    return { x, y, w: el.offsetWidth, h: el.offsetHeight };
+    return { x: x - GAP, y: y - GAP, w: el.offsetWidth + GAP * 2, h: el.offsetHeight + GAP * 2 };
   }
-  function keepOut(k) {
+  function contentWalls(k) {
     const pageEl = PAGES[k], boxes = [];
     const add = (el) => { if (el && el.offsetWidth) boxes.push(restBox(el, pageEl)); };
     if (k === "0") { add($("time")); add(clockEl.querySelector(".top")); add($("next")); }
     if (k === "1") { add($("nTitle")); add($("nClock")); noticeEl.querySelectorAll(".n-items li").forEach(add); add($("nNote")); }
     if (k === "-1") { add($("cKeys")); add($("cExpr")); add($("cOut")); }
     for (const el of [document.querySelector(".dots"), document.querySelector(".actions")]) {
-      const r = el.getBoundingClientRect(); boxes.push({ x: r.left, y: r.top, w: r.width, h: r.height });
+      const r = el.getBoundingClientRect();
+      boxes.push({ x: r.left - GAP, y: r.top - GAP, w: r.width + GAP * 2, h: r.height + GAP * 2 });
     }
     return boxes;
   }
+  const touchesBox = (x, y, r, b) => {
+    const cx = clamp(x, b.x, b.x + b.w), cy = clamp(y, b.y, b.y + b.h);
+    return (x - cx) ** 2 + (y - cy) ** 2 < r * r;
+  };
   function seedFloaters() {
     const w = window.innerWidth, h = window.innerHeight;
     fx.w = w; fx.h = h; fx.dpr = Math.min(2, window.devicePixelRatio || 1);
     for (const c of Object.values(fx.canvases)) { c.width = Math.round(w * fx.dpr); c.height = Math.round(h * fx.dpr); }
-    const target = Math.round(clamp((w * h) / 52000, 12, 24));
+    const want = Math.round(clamp((w * h) / 52000, 12, 24));
     for (const k of ["-1", "0", "1"]) {
       let seed = 7 + (Number(k) + 1) * 101;             // stable layout per page and screen size (must stay positive)
       const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-      const boxes = keepOut(k), set = [];
-      for (let tries = 0; set.length < target && tries < 900; tries++) {
+      const walls = contentWalls(k), set = [];
+      for (let tries = 0; set.length < want && tries < 1200; tries++) {
         const s = rnd() ** 1.8;                         // mostly small, a few large
-        const f = {
-          x: rnd() * w, y: rnd() * h,
-          r: 2 + s * 16,
-          a: 0.42 + s * 0.38,                           // bigger dots read darker, small ones recede
-          ax: 10 + rnd() * 26, ay: 8 + rnd() * 20,      // loop size
-          fx: (Math.PI * 2) / (22 + rnd() * 20), fy: (Math.PI * 2) / (26 + rnd() * 22),
-          px: rnd() * 6.3, py: rnd() * 6.3,
-        };
-        const reach = f.r + 14;                         // dot size + breathing room
-        const hit = boxes.some((b) =>
-          f.x + f.ax + reach > b.x && f.x - f.ax - reach < b.x + b.w &&
-          f.y + f.ay + reach > b.y && f.y - f.ay - reach < b.y + b.h);
-        const off = f.x - f.ax - reach < 0 && f.x + f.ax + reach > w;   // never wider than the screen
-        if (!hit && !off) set.push(f);
+        const r = 3 + s * 15;
+        const x = r + rnd() * (w - 2 * r), y = r + rnd() * (h - 2 * r);
+        if (walls.some((b) => touchesBox(x, y, r + 2, b))) continue;
+        if (set.some((o) => (o.x - x) ** 2 + (o.y - y) ** 2 < (o.r + r + 4) ** 2)) continue;
+        const ang = rnd() * Math.PI * 2;
+        const speed = 34 - s * 20;                      // px/s: heavy dots drift slower
+        set.push({ x, y, r, m: r * r, a: 0.85 + s * 0.15, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed, cruise: speed });
       }
-      fx.sets[k] = set;
+      fx.sets[k] = set; fx.walls[k] = walls;
     }
   }
-  function reseedSoon() { clearTimeout(fx.timer); fx.timer = setTimeout(() => { seedFloaters(); drawFloaters(performance.now()); }, 120); }
-  function drawFloaters(now) {
-    const t = reduceMQ.matches ? 0 : now / 1000;
-    const show = { "-1": pos < -0.0005, "0": Math.abs(pos) < 0.999, "1": pos > 0.0005 };
+  function reseedSoon() { clearTimeout(fx.timer); fx.timer = setTimeout(() => { seedFloaters(); drawFloaters(); }, 120); }
+
+  function stepDots(k, dt) {
+    const set = fx.sets[k], walls = fx.walls[k], w = fx.w, h = fx.h;
+    for (const d of set) {
+      d.x += d.vx * dt; d.y += d.vy * dt;
+      // Screen edges
+      if (d.x < d.r) { d.x = d.r; d.vx = Math.abs(d.vx); }
+      else if (d.x > w - d.r) { d.x = w - d.r; d.vx = -Math.abs(d.vx); }
+      if (d.y < d.r) { d.y = d.r; d.vy = Math.abs(d.vy); }
+      else if (d.y > h - d.r) { d.y = h - d.r; d.vy = -Math.abs(d.vy); }
+      // Content boxes: push out along the contact normal and reflect the velocity
+      for (const b of walls) {
+        const cx = clamp(d.x, b.x, b.x + b.w), cy = clamp(d.y, b.y, b.y + b.h);
+        let nx = d.x - cx, ny = d.y - cy, dist = Math.hypot(nx, ny);
+        if (dist >= d.r) continue;
+        if (dist === 0) {                               // centre inside the box: leave by the nearest side
+          const opts = [[d.x - b.x, -1, 0], [b.x + b.w - d.x, 1, 0], [d.y - b.y, 0, -1], [b.y + b.h - d.y, 0, 1]];
+          opts.sort((a, c) => a[0] - c[0]);
+          nx = opts[0][1]; ny = opts[0][2];
+          d.x += nx * (opts[0][0] + d.r); d.y += ny * (opts[0][0] + d.r);
+        } else {
+          nx /= dist; ny /= dist;
+          d.x += nx * (d.r - dist); d.y += ny * (d.r - dist);
+        }
+        const vn = d.vx * nx + d.vy * ny;
+        if (vn < 0) { d.vx -= 2 * vn * nx; d.vy -= 2 * vn * ny; }
+      }
+    }
+    // Dot–dot: elastic collision along the line of centres, weighted by mass
+    for (let i = 0; i < set.length; i++) {
+      const a = set[i];
+      for (let j = i + 1; j < set.length; j++) {
+        const b = set[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        const min = a.r + b.r, d2 = dx * dx + dy * dy;
+        if (d2 >= min * min || d2 === 0) continue;
+        const dist = Math.sqrt(d2); dx /= dist; dy /= dist;
+        const overlap = min - dist, total = a.m + b.m;
+        a.x -= dx * overlap * (b.m / total); a.y -= dy * overlap * (b.m / total);
+        b.x += dx * overlap * (a.m / total); b.y += dy * overlap * (a.m / total);
+        const rel = (b.vx - a.vx) * dx + (b.vy - a.vy) * dy;
+        if (rel >= 0) continue;                         // already separating
+        const imp = (2 * rel) / total;
+        a.vx += imp * b.m * dx; a.vy += imp * b.m * dy;
+        b.vx -= imp * a.m * dx; b.vy -= imp * a.m * dy;
+      }
+    }
+    // Keep the scene calm: speeds ease back toward each dot's cruising speed
+    for (const d of set) {
+      const sp = Math.hypot(d.vx, d.vy) || 1;
+      const f = 1 + (d.cruise / sp - 1) * Math.min(1, dt * 0.6);
+      d.vx *= f; d.vy *= f;
+    }
+  }
+
+  const shownPages = () => ({ "-1": pos < -0.0005, "0": Math.abs(pos) < 0.999, "1": pos > 0.0005 });
+  function drawFloaters() {
+    const show = shownPages();
     for (const k of ["-1", "0", "1"]) {
       const c = fx.canvases[k];
       if (!show[k]) { if (c.dataset.drawn) { c.getContext("2d").clearRect(0, 0, c.width, c.height); delete c.dataset.drawn; } continue; }
@@ -1462,17 +1518,23 @@
       g.setTransform(fx.dpr, 0, 0, fx.dpr, 0, 0);
       g.clearRect(0, 0, fx.w, fx.h);
       g.fillStyle = fx.color;
-      for (const f of fx.sets[k]) {
-        const x = f.x + f.ax * Math.sin(t * f.fx + f.px), y = f.y + f.ay * Math.sin(t * f.fy + f.py);
-        g.globalAlpha = f.a;
-        g.beginPath(); g.arc(x, y, f.r, 0, Math.PI * 2); g.fill();
+      for (const d of fx.sets[k]) {
+        g.globalAlpha = d.a;
+        g.beginPath(); g.arc(d.x, d.y, d.r, 0, Math.PI * 2); g.fill();
       }
       c.dataset.drawn = "1";
     }
   }
   function fxLoop(now) {
-    if (now - fx.lastDraw >= 33) { fx.lastDraw = now; drawFloaters(now); }   // ~30 fps
+    if (now - fx.lastDraw >= 33) {                      // ~30 fps
+      const dt = Math.min(0.05, (now - (fx.lastDraw || now)) / 1000);
+      fx.lastDraw = now;
+      const show = shownPages();
+      for (const k of ["-1", "0", "1"]) if (show[k]) { stepDots(k, dt / 2); stepDots(k, dt / 2); }
+      drawFloaters();
+    }
     if (!reduceMQ.matches && document.visibilityState === "visible") requestAnimationFrame(fxLoop);
+    else fx.lastDraw = 0;
   }
   seedFloaters();
   window.addEventListener("resize", reseedSoon);
@@ -1481,7 +1543,7 @@
   if (reduceMQ.addEventListener) reduceMQ.addEventListener("change", () => requestAnimationFrame(fxLoop));
 
   target = page; paint(); settle();
-  drawFloaters(performance.now());
+  drawFloaters();
   requestAnimationFrame(fxLoop);
   renderCalc();
   renderList();
