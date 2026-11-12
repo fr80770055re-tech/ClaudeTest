@@ -30,7 +30,7 @@
     --orange: #D9500F;
     --orange-deep: #B8420B;
     --orange-ink: #7A2A05;
-    --floater: #1A0B04;      /* warm black for the ambient dots and strokes */
+    --floater: #1A0B04;      /* warm black for the ambient dots */
     --orange-recess: #C4470D;
     --key: #B8420B;          /* digit keys: deep orange, cream numerals ≈ 5:1 */
     --key-press: #9E380A;
@@ -142,7 +142,7 @@
   /* ─── Notice page ─── */
   .page > :not(.shade):not(.fx) { translate: var(--edge, 0px) 0; position: relative; z-index: 1; }
   .shade { position: absolute; inset: 0; z-index: 2; background: var(--orange-ink); opacity: 0; pointer-events: none; }
-  /* Ambient floaters: drawn behind each page's content, so they never cover text. */
+  /* Ambient dots: drawn behind each page's content, so they never cover text. */
   .fx { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; }
   /* The notice pours in over the clock through a liquid edge (clip-path), led by a darker wave. */
   .notice { gap: 3vh; z-index: 2; }
@@ -1395,7 +1395,7 @@
     setTimeout(loop, 1000 - (Date.now() % 1000) + 5);
   }
 
-  // ── Ambient floaters: warm-black dots and thick strokes drifting in the empty space ──
+  // ── Ambient floaters: warm-black dots of mixed sizes drifting in the empty space ──
   // Each page gets its own set. A floater loops slowly around an anchor, and an anchor
   // is only accepted where its whole loop stays clear of that page's content (time,
   // prices, readout, controls), so nothing ever drifts behind text. Drawn at 30 fps into
@@ -1432,16 +1432,16 @@
       const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
       const boxes = keepOut(k), set = [];
       for (let tries = 0; set.length < target && tries < 900; tries++) {
-        const line = rnd() < 0.34, s = rnd() ** 1.8;    // mostly small, a few large
+        const s = rnd() ** 1.8;                         // mostly small, a few large
         const f = {
-          line, x: rnd() * w, y: rnd() * h,
-          r: line ? 0 : 2 + s * 13, len: line ? 26 + s * 64 : 0, lw: line ? 5 + s * 5 : 0,
-          a: 0.42 + s * 0.38,
+          x: rnd() * w, y: rnd() * h,
+          r: 2 + s * 16,
+          a: 0.42 + s * 0.38,                           // bigger dots read darker, small ones recede
           ax: 10 + rnd() * 26, ay: 8 + rnd() * 20,      // loop size
           fx: (Math.PI * 2) / (22 + rnd() * 20), fy: (Math.PI * 2) / (26 + rnd() * 22),
-          px: rnd() * 6.3, py: rnd() * 6.3, rot: rnd() * Math.PI, spin: (rnd() - 0.5) * 0.24,
+          px: rnd() * 6.3, py: rnd() * 6.3,
         };
-        const reach = (f.line ? f.len / 2 + f.lw : f.r) + 14;   // shape size + breathing room
+        const reach = f.r + 14;                         // dot size + breathing room
         const hit = boxes.some((b) =>
           f.x + f.ax + reach > b.x && f.x - f.ax - reach < b.x + b.w &&
           f.y + f.ay + reach > b.y && f.y - f.ay - reach < b.y + b.h);
@@ -1461,18 +1461,11 @@
       const g = c.getContext("2d");
       g.setTransform(fx.dpr, 0, 0, fx.dpr, 0, 0);
       g.clearRect(0, 0, fx.w, fx.h);
-      g.fillStyle = g.strokeStyle = fx.color;
-      g.lineCap = "round";
+      g.fillStyle = fx.color;
       for (const f of fx.sets[k]) {
         const x = f.x + f.ax * Math.sin(t * f.fx + f.px), y = f.y + f.ay * Math.sin(t * f.fy + f.py);
         g.globalAlpha = f.a;
-        if (f.line) {
-          const ang = f.rot + t * f.spin, dx = Math.cos(ang) * f.len / 2, dy = Math.sin(ang) * f.len / 2;
-          g.lineWidth = f.lw;
-          g.beginPath(); g.moveTo(x - dx, y - dy); g.lineTo(x + dx, y + dy); g.stroke();
-        } else {
-          g.beginPath(); g.arc(x, y, f.r, 0, Math.PI * 2); g.fill();
-        }
+        g.beginPath(); g.arc(x, y, f.r, 0, Math.PI * 2); g.fill();
       }
       c.dataset.drawn = "1";
     }
