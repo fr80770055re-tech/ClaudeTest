@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>分配律圖解｜五年級數學</title>
+  <title>分配律與交換律圖解｜五年級數學</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
 
@@ -67,6 +67,23 @@
 
     .app { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
 
+    /* ─── Mode tabs ─── */
+    .tabs {
+      display: flex; gap: 6px;
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 6px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px 4px;
+      border: none; background: transparent; border-radius: 8px;
+      font-family: inherit; font-size: .95rem; font-weight: 700;
+      color: var(--muted); cursor: pointer;
+    }
+    .tab-btn.active { background: var(--blue); color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,.30); }
+
     /* ─── Toolbar ─── */
     .toolbar {
       display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center;
@@ -82,37 +99,38 @@
       font: inherit; text-align: center; color: var(--ink);
       border: 2px solid var(--border); border-radius: 8px; outline: none;
     }
+    .nums input::placeholder { font-size: .9rem; font-weight: 500; color: #CBD5E1; }
     .nums input:focus { border-color: var(--blue); }
+    .k-part { display: contents; }
+    .k-part[hidden] { display: none; }
     .chip {
       padding: 7px 12px;
       border: 2px solid var(--border); border-radius: 99px;
       background: var(--white); color: var(--ink);
       font-family: inherit; font-size: .88rem; font-weight: 700;
-      cursor: pointer;
+      cursor: pointer; white-space: nowrap;
     }
     .chip:hover { border-color: var(--blue); color: var(--blue); }
-    .presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-    .presets span { font-size: .8rem; font-weight: 700; color: var(--muted); }
+    .chip[hidden] { display: none; }
+    .chip.solid { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .chip.solid:hover { opacity: .9; color: #fff; }
     .dots-toggle { display: flex; align-items: center; gap: 6px; font-size: .88rem; font-weight: 700; cursor: pointer; }
     .dots-toggle input { width: 18px; height: 18px; accent-color: var(--blue); }
     .dots-toggle.off { opacity: .4; cursor: default; }
 
-    /* ─── Mode tabs ─── */
-    .tabs {
-      display: flex; gap: 6px;
-      background: var(--white);
-      border-radius: var(--radius);
-      padding: 6px;
-      box-shadow: var(--shadow);
-      margin-bottom: 14px;
+    /* ─── Examples ─── */
+    .examples { display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: center; width: 100%; padding-top: 10px; border-top: 1px dashed var(--border); }
+    .examples .lbl { font-size: .8rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .ex-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .ex-row .empty { font-size: .85rem; color: var(--muted); }
+    .mine { display: inline-flex; align-items: stretch; }
+    .mine .chip { border-radius: 99px 0 0 99px; border-right: none; }
+    .mine .del {
+      border: 2px solid var(--border); border-left: 1px solid var(--border);
+      border-radius: 0 99px 99px 0; background: var(--white);
+      color: var(--muted); font-size: .9rem; padding: 0 10px; cursor: pointer;
     }
-    .tab-btn {
-      flex: 1; padding: 10px 0;
-      border: none; background: transparent; border-radius: 8px;
-      font-family: inherit; font-size: .95rem; font-weight: 700;
-      color: var(--muted); cursor: pointer;
-    }
-    .tab-btn.active { background: var(--blue); color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,.30); }
+    .mine .del:hover { color: var(--red); border-color: var(--red); }
 
     /* ─── Figure ─── */
     .card {
@@ -123,6 +141,7 @@
     }
     #fig { width: 100%; height: auto; display: block; touch-action: none; user-select: none; -webkit-user-select: none; font-family: 'Noto Sans TC', sans-serif; outline: none; }
     #fig:focus-visible { outline: 3px solid var(--blue-lt); border-radius: 8px; }
+    .fade { transition: opacity .5s ease; }
     .hint { font-size: .9rem; color: var(--muted); text-align: center; margin-top: 2px; min-height: 1.4em; }
 
     /* ─── Equations ─── */
@@ -153,13 +172,14 @@
       cursor: pointer;
     }
     .btn.primary { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,.30); }
-    .btn.warn { border-color: var(--red); color: var(--red); }
+    .btn.danger { background: var(--red); border-color: var(--red); color: #fff; }
     .btn:disabled { opacity: .35; cursor: default; box-shadow: none; }
 
     @media (max-width: 600px) {
       header h1 { font-size: 1rem; }
       .nums { font-size: 1.2rem; }
       .eq { padding: 14px 14px; }
+      .examples { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -173,38 +193,47 @@
     </svg>
   </div>
   <div>
-    <h1>分配律圖解</h1>
-    <p>台灣國小五年級數學 · 用長方形看懂「拆開來乘」</p>
+    <h1>分配律與交換律圖解</h1>
+    <p>台灣國小五年級數學 · 用長方形看懂乘法的規律</p>
   </div>
   <a href="../">周長與面積出題工具 →</a>
 </header>
 
 <div class="app">
-  <div class="toolbar">
-    <div class="nums">
-      <input id="in-a" type="number" min="2" max="999" inputmode="numeric" aria-label="第一個數" value="205" />
-      <span>×</span>
-      <input id="in-b" type="number" min="2" max="999" inputmode="numeric" aria-label="第二個數" value="15" />
-    </div>
-    <button class="chip" id="btn-swap" title="改拆另一個數">⇄ 交換</button>
-    <button class="chip" id="btn-nice">✂️ 拆成好算的數</button>
-    <label class="dots-toggle" id="dots-wrap"><input type="checkbox" id="chk-dots" /> 顯示點點</label>
-    <div class="presets">
-      <span>範例</span>
-      <button class="chip" data-a="12" data-b="3">12 × 3</button>
-      <button class="chip" data-a="23" data-b="4">23 × 4</button>
-      <button class="chip" data-a="205" data-b="15">205 × 15</button>
-      <button class="chip" data-a="102" data-b="25">102 × 25</button>
-    </div>
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" role="tab" data-mode="learn">🧩 分配律</button>
+    <button class="tab-btn" role="tab" data-mode="wrong">🔍 找找看錯在哪</button>
+    <button class="tab-btn" role="tab" data-mode="commute">🔄 交換律</button>
   </div>
 
-  <div class="tabs" role="tablist">
-    <button class="tab-btn active" role="tab" data-mode="learn">🧩 一步一步拆</button>
-    <button class="tab-btn" role="tab" data-mode="wrong">🔍 找找看錯在哪</button>
+  <div class="toolbar">
+    <div class="nums">
+      <input id="in-a" type="number" min="2" max="999" inputmode="numeric" aria-label="第一個數" />
+      <span>×</span>
+      <input id="in-b" type="number" min="2" max="999" inputmode="numeric" aria-label="第二個數" />
+      <span class="k-part" id="k-part" hidden>
+        <span>×</span>
+        <input id="in-k" type="number" min="2" max="999" inputmode="numeric" placeholder="可空白" aria-label="第三個數（可空白）" />
+      </span>
+    </div>
+    <button class="chip" id="btn-swap" title="兩個數交換位置">⇄ 交換</button>
+    <button class="chip" id="btn-nice">✂️ 拆成好算的數</button>
+    <label class="dots-toggle" id="dots-wrap"><input type="checkbox" id="chk-dots" /> 顯示點點</label>
+
+    <div class="examples">
+      <span class="lbl">例題</span>
+      <div class="ex-row" id="ex-builtin"></div>
+      <span class="lbl">我的例題</span>
+      <div class="ex-row">
+        <span id="ex-mine" class="ex-row"></span>
+        <button class="chip solid" id="btn-save">＋ 存目前題目</button>
+        <button class="chip" id="btn-rand">🎲 隨機一題</button>
+      </div>
+    </div>
   </div>
 
   <div class="card">
-    <svg id="fig" viewBox="0 0 1000 440" tabindex="0" aria-label="分配律長方形圖"><g id="g"></g></svg>
+    <svg id="fig" viewBox="0 0 1000 440" tabindex="0" aria-label="乘法長方形圖"><g id="g"></g></svg>
     <p class="hint" id="hint"></p>
   </div>
 
@@ -216,15 +245,96 @@
 
 <script>
 // ─── State ────────────────────────────────────────────────────────────────────
-const state = { a: 205, b: 15, c: 200, step: 0, mode: 'learn', checked: false, dots: false };
-const MAX_STEP = 4;
+// 分配律與找錯共用一組數字；交換律另一組（可有第三個數 k）
+const state = {
+  mode: 'learn',
+  dist: { a: 205, b: 15, c: 200 },
+  com:  { a: 12, b: 3, k: 0 },
+  step: 0,
+  checked: false,
+  dots: false,
+};
 const $ = id => document.getElementById(id);
+const isCom = () => state.mode === 'commute';
 
 const COLOR = {
-  blue: '#2563EB', blueLt: '#DBEAFE',
-  amber: '#F59E0B', amberLt: '#FEF3C7', amberDk: '#B45309',
+  blue: '#2563EB', blueLt: '#DBEAFE', blueMid: '#BFDBFE',
+  amber: '#F59E0B', amberLt: '#FEF3C7', amberMid: '#FDE68A', amberDk: '#B45309',
   red: '#DC2626', redLt: '#FEF2F2',
   gray: '#E2E8F0', grayDk: '#64748B', dot: '#94A3B8', ink: '#1E293B',
+};
+
+// ─── Example bank ─────────────────────────────────────────────────────────────
+const BUILTIN = {
+  dist: [
+    [12, 3], [14, 6], [23, 4], [36, 5], [48, 7], [57, 8],
+    [102, 25], [104, 15], [205, 15], [306, 12], [408, 25], [503, 16],
+  ],
+  com: [
+    [3, 5], [4, 7], [6, 9], [12, 3], [8, 15],
+    [25, 37, 4], [5, 19, 2], [125, 7, 8], [4, 23, 25], [50, 13, 2],
+  ],
+};
+const STORE_KEY = 'distributive-my-examples-v1';
+function loadMine() {
+  try {
+    const v = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    return { dist: Array.isArray(v.dist) ? v.dist : [], com: Array.isArray(v.com) ? v.com : [] };
+  } catch { return { dist: [], com: [] }; }
+}
+function saveMine(m) { try { localStorage.setItem(STORE_KEY, JSON.stringify(m)); } catch {} }
+let mine = loadMine();
+
+const group = () => isCom() ? 'com' : 'dist';
+const exLabel = ex => ex.filter(Boolean).join(' × ');
+
+function renderExamples() {
+  const g = group();
+  $('ex-builtin').innerHTML = BUILTIN[g].map((ex, i) =>
+    `<button class="chip" data-i="${i}">${exLabel(ex)}</button>`).join('');
+  $('ex-builtin').querySelectorAll('.chip').forEach(btn =>
+    btn.onclick = () => applyExample(BUILTIN[g][+btn.dataset.i]));
+
+  const list = mine[g];
+  $('ex-mine').innerHTML = list.length
+    ? list.map((ex, i) => `<span class="mine"><button class="chip" data-i="${i}">${exLabel(ex)}</button><button class="del" data-i="${i}" aria-label="刪除">×</button></span>`).join('')
+    : '<span class="empty">還沒有。輸入數字後按「存目前題目」。</span>';
+  $('ex-mine').querySelectorAll('.chip').forEach(btn =>
+    btn.onclick = () => applyExample(mine[g][+btn.dataset.i]));
+  $('ex-mine').querySelectorAll('.del').forEach(btn => btn.onclick = () => {
+    mine[g].splice(+btn.dataset.i, 1); saveMine(mine); renderExamples();
+  });
+}
+
+function currentExample() {
+  return isCom()
+    ? [state.com.a, state.com.b, state.com.k].filter(Boolean)
+    : [state.dist.a, state.dist.b];
+}
+$('btn-save').onclick = () => {
+  const ex = currentExample();
+  const g = group();
+  if (!mine[g].some(m => exLabel(m) === exLabel(ex))) {
+    mine[g].push(ex); saveMine(mine);
+  }
+  renderExamples();
+};
+
+const rnd = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+$('btn-rand').onclick = () => {
+  if (isCom()) {
+    if (Math.random() < .5) applyExample([rnd(2, 12), rnd(2, 12)]);
+    else {
+      const [x, y] = pick([[25, 4], [5, 2], [125, 8], [50, 2], [20, 5], [4, 25], [2, 50]]);
+      applyExample([x, rnd(11, 99), y]);
+    }
+  } else if (Math.random() < .5) {
+    let a; do { a = rnd(11, 99); } while (a % 10 === 0);
+    applyExample([a, rnd(3, 9)]);
+  } else {
+    applyExample([rnd(1, 9) * 100 + rnd(1, 9), rnd(11, 29)]);
+  }
 };
 
 // 拆成好算的數：205 → 200 + 5、48 → 40 + 8、200 → 100 + 100
@@ -237,11 +347,23 @@ function niceSplit(a) {
   return Math.max(1, Math.floor(a / 2));
 }
 
-// ─── Geometry ─────────────────────────────────────────────────────────────────
+// ─── SVG helpers ──────────────────────────────────────────────────────────────
+const rectEl = (x, y, w, h, fill, stroke, extra = '') =>
+  `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="3" ${extra}/>`;
+const textEl = (x, y, t, { size = 30, fill = COLOR.ink, anchor = 'middle', weight = 900 } = {}) =>
+  `<text x="${x}" y="${y}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}" dominant-baseline="middle">${t}</text>`;
+function brace(x1, x2, y, color) {
+  return `<path d="M${x1} ${y + 10} V${y} H${x2} V${y + 10}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"/>`;
+}
+function vbrace(y1, y2, x, color) {
+  return `<path d="M${x + 10} ${y1} H${x} V${y2} H${x + 10}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"/>`;
+}
+
+// ═══ 分配律 ═══════════════════════════════════════════════════════════════════
 const X0 = 90, Y0 = 84, MAXW = 860, MAXH = 290, MIN_PIECE = 46;
 
-function layout() {
-  const { a, b } = state;
+function distLayout() {
+  const { a, b } = state.dist;
   const dotsOK = a <= 30 && b <= 20;
   const dots = state.dots && dotsOK;
   let W, H, cell = 0;
@@ -257,17 +379,17 @@ function layout() {
   return { W, H, cell, dots, dotsOK, ratioTrue, ox, oy: Y0 };
 }
 
-// 切線位置：數字大時讓窄的那塊至少有 MIN_PIECE 寬，才看得到、拖得到
-function margin(L) { return Math.min(L.W / 2, Math.max(L.W / state.a, MIN_PIECE)); }
+// 數字大時讓窄的那塊至少有 MIN_PIECE 寬，才看得到、拖得到
+function margin(L) { return Math.min(L.W / 2, Math.max(L.W / state.dist.a, MIN_PIECE)); }
 function cutX(c, L) {
-  const a = state.a;
+  const a = state.dist.a;
   if (L.dots) return c * L.cell;
   if (a <= 2) return L.W / 2;
   const m = margin(L);
   return m + (c - 1) / (a - 2) * (L.W - 2 * m);
 }
 function cFromX(x, L) {
-  const a = state.a;
+  const a = state.dist.a;
   let c;
   if (L.dots) c = Math.round(x / L.cell);
   else if (a <= 2) c = 1;
@@ -275,34 +397,22 @@ function cFromX(x, L) {
   return Math.min(a - 1, Math.max(1, c));
 }
 
-// ─── SVG helpers ──────────────────────────────────────────────────────────────
-const rectEl = (x, y, w, h, fill, stroke, extra = '') =>
-  `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="3" ${extra}/>`;
-const textEl = (x, y, t, { size = 30, fill = COLOR.ink, anchor = 'middle', weight = 900 } = {}) =>
-  `<text x="${x}" y="${y}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}" dominant-baseline="middle">${t}</text>`;
-function brace(x1, x2, y, color) {
-  return `<path d="M${x1} ${y + 10} V${y} H${x2} V${y + 10}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"/>`;
-}
-
-// ─── Render figure ────────────────────────────────────────────────────────────
-function renderFigure() {
-  const L = layout();
-  const { a, b, c, step, mode, checked } = state;
+function renderDistFigure() {
+  comKey = '';
+  const L = distLayout();
+  const { a, b, c } = state.dist;
+  const { step, mode, checked } = state;
   const d = a - c;
   const learn = mode === 'learn';
   const showCut = !learn || step >= 1;
-  const colored = showCut;
   const missing = !learn && checked;
   const showInside = learn ? step >= 2 : checked;
   const showAreas = learn ? step >= 3 : checked;
   const { ox, oy, W, H } = L;
   const xc = cutX(c, L);
-  const svgH = oy + H + (showAreas ? 96 : 60);
-  $('fig').setAttribute('viewBox', `0 0 1000 ${svgH}`);
+  $('fig').setAttribute('viewBox', `0 0 1000 ${oy + H + (showAreas ? 96 : 60)}`);
 
   let s = '';
-
-  // 長方形
   if (!showCut) {
     s += rectEl(ox, oy, W, H, COLOR.gray, COLOR.grayDk);
   } else {
@@ -311,13 +421,12 @@ function renderFigure() {
     else s += rectEl(ox + xc, oy, W - xc, H, COLOR.amberLt, COLOR.amber);
   }
 
-  // 點點
   if (L.dots) {
     const r = L.cell * 0.26;
     for (let i = 0; i < a; i++) {
       for (let j = 0; j < b; j++) {
         const cx = ox + (i + 0.5) * L.cell, cy = oy + (j + 0.5) * L.cell;
-        if (!colored) s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${COLOR.dot}"/>`;
+        if (!showCut) s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${COLOR.dot}"/>`;
         else if (i < c) s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${COLOR.blue}"/>`;
         else if (missing) s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${COLOR.red}" stroke-width="2" stroke-dasharray="4 3"/>`;
         else s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${COLOR.amber}"/>`;
@@ -325,7 +434,6 @@ function renderFigure() {
     }
   }
 
-  // 上方標籤
   if (!showCut) {
     s += brace(ox, ox + W, oy - 22, COLOR.grayDk);
     s += textEl(ox + W / 2, oy - 50, a, { size: 34 });
@@ -335,18 +443,14 @@ function renderFigure() {
     s += textEl(ox + xc / 2, oy - 50, c, { size: 34, fill: COLOR.blue });
     s += textEl(ox + xc + (W - xc) / 2, oy - 50, d, { size: 34, fill: missing ? COLOR.red : COLOR.amberDk });
   }
-
-  // 左邊標籤
   s += textEl(ox - 20, oy + H / 2, b, { size: 34, anchor: 'end' });
 
-  // 塊內文字：「200 個 15」
   if (showInside && !L.dots) {
     if (xc >= 170) s += textEl(ox + xc / 2, oy + H / 2, `${c} 個 ${b}`, { size: 30, fill: COLOR.blue });
     const rw = W - xc;
     if (rw >= 170) s += textEl(ox + xc + rw / 2, oy + H / 2, missing ? '不見了！' : `${d} 個 ${b}`, { size: 30, fill: missing ? COLOR.red : COLOR.amberDk });
   }
 
-  // 切線與把手
   if (showCut) {
     const x = ox + xc;
     s += `<line x1="${x}" y1="${oy - 12}" x2="${x}" y2="${oy + H + 12}" stroke="${COLOR.ink}" stroke-width="3" stroke-dasharray="8 6"/>`;
@@ -356,61 +460,164 @@ function renderFigure() {
           </g>`;
   }
 
-  // 下方算式
   if (showAreas) {
     const y = oy + H + 72;
     const leftTxt = `${c} × ${b} = ${c * b}`;
     const rightTxt = missing ? `${d} × ${b} = ${d * b}，不見了！` : `${d} × ${b} = ${d * b}`;
     const rw = W - xc;
-    const leftAnchor = xc < 260 ? ['start', ox] : ['middle', ox + xc / 2];
-    const rightAnchor = rw < 260 ? ['end', ox + W] : ['middle', ox + xc + rw / 2];
-    s += textEl(leftAnchor[1], y, leftTxt, { size: 28, fill: COLOR.blue, anchor: leftAnchor[0] });
-    s += textEl(rightAnchor[1], y, rightTxt, { size: 28, fill: missing ? COLOR.red : COLOR.amberDk, anchor: rightAnchor[0] });
+    const la = xc < 260 ? ['start', ox] : ['middle', ox + xc / 2];
+    const ra = rw < 260 ? ['end', ox + W] : ['middle', ox + xc + rw / 2];
+    s += textEl(la[1], y, leftTxt, { size: 28, fill: COLOR.blue, anchor: la[0] });
+    s += textEl(ra[1], y, rightTxt, { size: 28, fill: missing ? COLOR.red : COLOR.amberDk, anchor: ra[0] });
   }
 
   $('g').innerHTML = s;
 
-  // 提示
   const tips = [];
   if (showCut) tips.push('拖曳虛線（或按 ← →）可以換一種拆法');
   if (!L.ratioTrue) tips.push('示意圖：沒有照實際比例畫');
   $('hint').textContent = tips.join('　·　');
-
-  const wrap = $('dots-wrap');
-  wrap.classList.toggle('off', !L.dotsOK);
-  $('chk-dots').disabled = !L.dotsOK;
-  $('chk-dots').checked = L.dots;
+  setDotsToggle(L.dotsOK, L.dots);
 }
 
-// ─── Render equations ─────────────────────────────────────────────────────────
+// ═══ 交換律 ═══════════════════════════════════════════════════════════════════
+// 圖上畫「被交換的那兩個數」p × q：寬 p 條、每條 q 個。轉 90° 後變成寬 q 條、每條 p 個。
+const S = 320, CX = 500, MIN_SIDE = 56;
+let comKey = '';
+
+function comPair() {
+  const { a, b, k } = state.com;
+  return k ? [b, k] : [a, b];
+}
+function comLayout() {
+  const [p, q] = comPair();
+  const mx = Math.max(p, q);
+  const dotsOK = mx <= 15;
+  const dots = state.dots && dotsOK;
+  let w = S * p / mx, h = S * q / mx;
+  const ratioTrue = w >= MIN_SIDE && h >= MIN_SIDE;
+  w = Math.max(w, MIN_SIDE); h = Math.max(h, MIN_SIDE);
+  return { p, q, w, h, dots, dotsOK, ratioTrue, cy: 80 + S / 2 };
+}
+
+function buildComFigure(L) {
+  const { p, q, w, h, cy } = L;
+  const x0 = CX - w / 2, y0 = cy - h / 2;
+  $('fig').setAttribute('viewBox', `0 0 1000 ${S + 160}`);
+
+  // 會旋轉的部分：長方形、兩組條紋、點點
+  let r = `<g id="rot" style="transform-origin:${CX}px ${cy}px; transition: transform .9s ease;">`;
+  r += rectEl(x0, y0, w, h, COLOR.gray, COLOR.grayDk);
+  // 藍色直條：p 條，每條 q 個（「p 個 q」）
+  if (p <= 60) {
+    r += `<g id="stripe-p" class="fade">`;
+    for (let i = 0; i < p; i++) {
+      r += `<rect x="${x0 + i * w / p}" y="${y0}" width="${w / p}" height="${h}" fill="${i % 2 ? COLOR.blueMid : COLOR.blueLt}"/>`;
+    }
+    r += `</g>`;
+  }
+  // 橘色橫條：q 條，轉 90° 後變成直條（「q 個 p」）
+  if (q <= 60) {
+    r += `<g id="stripe-q" class="fade" opacity="0">`;
+    for (let j = 0; j < q; j++) {
+      r += `<rect x="${x0}" y="${y0 + j * h / q}" width="${w}" height="${h / q}" fill="${j % 2 ? COLOR.amberMid : COLOR.amberLt}"/>`;
+    }
+    r += `</g>`;
+  }
+  r += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="none" stroke="${COLOR.ink}" stroke-width="3"/>`;
+  if (L.dots) {
+    const cw = w / p, ch = h / q, rad = Math.min(cw, ch) * 0.24;
+    for (let i = 0; i < p; i++) for (let j = 0; j < q; j++) {
+      r += `<circle cx="${x0 + (i + .5) * cw}" cy="${y0 + (j + .5) * ch}" r="${rad}" fill="${COLOR.ink}"/>`;
+    }
+  }
+  r += `</g>`;
+
+  // 不旋轉的標籤：原本方向、轉過來之後各一組
+  let o = `<g id="lab-orig" class="fade">`;
+  o += brace(CX - w / 2, CX + w / 2, cy - h / 2 - 22, COLOR.blue);
+  o += textEl(CX, cy - h / 2 - 50, `${p} 條`, { size: 32, fill: COLOR.blue });
+  o += vbrace(cy - h / 2, cy + h / 2, CX - w / 2 - 22, COLOR.grayDk);
+  o += textEl(CX - w / 2 - 32, cy, `每條 ${q} 個`, { size: 28, anchor: 'end' });
+  o += textEl(CX, cy + h / 2 + 46, `${p} × ${q}`, { size: 34 });
+  o += `</g>`;
+
+  let t = `<g id="lab-rot" class="fade" opacity="0">`;
+  t += brace(CX - h / 2, CX + h / 2, cy - w / 2 - 22, COLOR.amberDk);
+  t += textEl(CX, cy - w / 2 - 50, `${q} 條`, { size: 32, fill: COLOR.amberDk });
+  t += vbrace(cy - w / 2, cy + w / 2, CX - h / 2 - 22, COLOR.grayDk);
+  t += textEl(CX - h / 2 - 32, cy, `每條 ${p} 個`, { size: 28, anchor: 'end' });
+  t += textEl(CX, cy + w / 2 + 46, `${q} × ${p}`, { size: 34 });
+  t += `</g>`;
+
+  $('g').innerHTML = r + o + t;
+}
+
+function renderComFigure() {
+  const L = comLayout();
+  const key = `${L.p},${L.q},${L.dots}`;
+  if (key !== comKey) { buildComFigure(L); comKey = key; }
+  const rotated = state.step >= 1;
+  // 先讓瀏覽器畫出原狀態，再加上旋轉，動畫才會出現
+  requestAnimationFrame(() => {
+    const rot = $('rot');
+    if (!rot) return;
+    rot.style.transform = rotated ? 'rotate(90deg)' : 'rotate(0deg)';
+    const setO = (id, v) => { const el = $(id); if (el) el.setAttribute('opacity', v); };
+    setO('stripe-p', rotated ? 0 : 1);
+    setO('stripe-q', rotated ? 1 : 0);
+    setO('lab-orig', rotated ? 0 : 1);
+    setO('lab-rot', rotated ? 1 : 0);
+  });
+
+  const tips = [rotated ? '按「上一步」可以轉回去' : '按「下一步」把長方形轉 90°'];
+  if (!L.ratioTrue) tips.push('示意圖：沒有照實際比例畫');
+  $('hint').textContent = tips.join('　·　');
+  setDotsToggle(L.dotsOK, L.dots);
+}
+
+// ─── Dots toggle ──────────────────────────────────────────────────────────────
+function setDotsToggle(ok, on) {
+  $('dots-wrap').classList.toggle('off', !ok);
+  $('chk-dots').disabled = !ok;
+  $('chk-dots').checked = on;
+}
+
+// ─── Equations ────────────────────────────────────────────────────────────────
 const B = t => `<span class="b">${t}</span>`;
 const A = t => `<span class="a">${t}</span>`;
 const R = t => `<span class="r">${t}</span>`;
 
+function stepLines(lines) {
+  const { step } = state;
+  $('eq').innerHTML = lines.slice(0, step + 1).map(([main, say], i) =>
+    `<div class="eq-line${i === step ? ' now' : ''}">${main}</div><div class="eq-say">${say}</div>`
+  ).join('');
+  const max = lines.length - 1;
+  $('stepper').innerHTML = `
+    <button class="btn" id="btn-prev" ${step === 0 ? 'disabled' : ''}>← 上一步</button>
+    <button class="btn primary" id="btn-next" ${step >= max ? 'disabled' : ''}>下一步 →</button>
+    <button class="btn" id="btn-reset">↺ 重來</button>`;
+  $('btn-prev').onclick = () => { state.step--; render(); };
+  $('btn-next').onclick = () => { state.step = Math.min(max, state.step + 1); render(); };
+  $('btn-reset').onclick = () => { state.step = 0; render(); };
+}
+
 function renderLearn() {
-  const { a, b, c, step } = state;
+  const { a, b, c } = state.dist;
   const d = a - c;
-  const lines = [
+  stepLines([
     [`${a} × ${b}`, `${a} × ${b} 就是「${a} 個 ${b}」`],
     [`= (${B(c)} + ${A(d)}) × ${b}`, `把 ${a} 拆成 ${B(c)} 和 ${A(d)}`],
     [`= ${B(`${c} × ${b}`)} + ${A(`${d} × ${b}`)}`, `${B(`${c} 個 ${b}`)}，再加上 ${A(`${d} 個 ${b}`)}：兩塊都要乘 ${b}`],
     [`= ${B(c * b)} + ${A(d * b)}`, '分別算出兩塊有多大'],
     [`= ${a * b}`, `<span class="ok">直接算 ${a} × ${b} 也是 ${a * b}，拆開來算，答案不會變 ✓</span>`],
-  ];
-  $('eq').innerHTML = lines.slice(0, step + 1).map(([main, say], i) =>
-    `<div class="eq-line${i === step ? ' now' : ''}">${main}</div><div class="eq-say">${say}</div>`
-  ).join('');
-  $('stepper').innerHTML = `
-    <button class="btn" id="btn-prev" ${step === 0 ? 'disabled' : ''}>← 上一步</button>
-    <button class="btn primary" id="btn-next" ${step === MAX_STEP ? 'disabled' : ''}>下一步 →</button>
-    <button class="btn" id="btn-reset">↺ 重來</button>`;
-  $('btn-prev').onclick = () => { state.step--; render(); };
-  $('btn-next').onclick = () => { state.step++; render(); };
-  $('btn-reset').onclick = () => { state.step = 0; render(); };
+  ]);
 }
 
 function renderWrong() {
-  const { a, b, c, checked } = state;
+  const { a, b, c } = state.dist;
+  const { checked } = state;
   const d = a - c;
   let html = `
     <div class="eq-say" style="margin-left:0">小明這樣算：</div>
@@ -428,14 +635,38 @@ function renderWrong() {
   $('eq').innerHTML = html;
   $('stepper').innerHTML = checked
     ? `<button class="btn" id="btn-again">↺ 再看一次</button>`
-    : `<button class="btn primary warn" id="btn-check" style="background:#DC2626;color:#fff;border-color:#DC2626">🔍 用圖檢查</button>`;
+    : `<button class="btn danger" id="btn-check">🔍 用圖檢查</button>`;
   if (checked) $('btn-again').onclick = () => { state.checked = false; render(); };
   else $('btn-check').onclick = () => { state.checked = true; render(); };
 }
 
+function renderCommute() {
+  const { a, b, k } = state.com;
+  if (!k) {
+    stepLines([
+      [`${B(`${a} × ${b}`)}`, `看成「${a} 個 ${b}」：藍色有 ${a} 條，每條 ${b} 個`],
+      [`${A(`${b} × ${a}`)}`, `把長方形轉過來，變成「${b} 個 ${a}」：橘色有 ${b} 條，每條 ${a} 個`],
+      [`${B(`${a} × ${b}`)} = ${A(`${b} × ${a}`)} = ${a * b}`, `<span class="ok">只是轉了方向，大小沒有變：兩個數交換位置，積不變 ✓</span>`],
+    ]);
+  } else {
+    stepLines([
+      [`${a} × ${B(b)} × ${A(k)}`, `${a} × ${b} 不好算，先看後面的 ${B(b)} × ${A(k)}`],
+      [`${B(b)} × ${A(k)} = ${A(k)} × ${B(b)}`, `轉過來看，大小不變，所以 ${b} 和 ${k} 可以交換位置`],
+      [`${a} × ${B(b)} × ${A(k)} = ${a} × ${A(k)} × ${B(b)}`, `把 ${A(k)} 換到前面，和 ${a} 放在一起`],
+      [`= ${a * k} × ${B(b)} = ${a * b * k}`, `<span class="ok">先算 ${a} × ${k} = ${a * k}，再乘 ${b}，變好算了 ✓</span>`],
+    ]);
+  }
+}
+
 function render() {
-  renderFigure();
-  if (state.mode === 'learn') renderLearn(); else renderWrong();
+  const com = isCom();
+  $('k-part').hidden = !com;
+  $('btn-nice').hidden = com;
+  if (com) { renderComFigure(); renderCommute(); }
+  else {
+    renderDistFigure();
+    if (state.mode === 'learn') renderLearn(); else renderWrong();
+  }
 }
 
 // ─── Inputs ───────────────────────────────────────────────────────────────────
@@ -445,44 +676,76 @@ function clampNum(v, fallback) {
   return Math.min(999, Math.max(2, n));
 }
 
-function setNumbers(a, b) {
-  state.a = a; state.b = b;
-  state.c = niceSplit(a);
-  state.dots = a <= 30 && b <= 20;
+function syncInputs() {
+  const n = isCom() ? state.com : state.dist;
+  $('in-a').value = n.a; $('in-b').value = n.b;
+  $('in-k').value = isCom() && state.com.k ? state.com.k : '';
+}
+
+function autoDots() {
+  if (isCom()) { const [p, q] = comPair(); state.dots = Math.max(p, q) <= 15; }
+  else state.dots = state.dist.a <= 30 && state.dist.b <= 20;
+}
+
+function applyExample(ex) {
+  if (isCom()) {
+    state.com = { a: ex[0], b: ex[1], k: ex[2] || 0 };
+  } else {
+    state.dist = { a: ex[0], b: ex[1], c: niceSplit(ex[0]) };
+  }
   state.step = 0;
   state.checked = false;
-  $('in-a').value = a; $('in-b').value = b;
+  autoDots();
+  syncInputs();
   render();
 }
 
-$('in-a').addEventListener('change', e => setNumbers(clampNum(e.target.value, state.a), state.b));
-$('in-b').addEventListener('change', e => setNumbers(state.a, clampNum(e.target.value, state.b)));
-$('btn-swap').onclick = () => setNumbers(state.b, state.a);
-$('btn-nice').onclick = () => { state.c = niceSplit(state.a); render(); };
-$('chk-dots').onchange = e => { state.dots = e.target.checked; render(); };
-document.querySelectorAll('.presets .chip').forEach(btn =>
-  btn.onclick = () => setNumbers(+btn.dataset.a, +btn.dataset.b));
+function readInputs() {
+  const a = clampNum($('in-a').value, isCom() ? state.com.a : state.dist.a);
+  const b = clampNum($('in-b').value, isCom() ? state.com.b : state.dist.b);
+  const kRaw = $('in-k').value.trim();
+  const k = kRaw === '' ? 0 : clampNum(kRaw, 0);
+  applyExample(isCom() ? [a, b, k] : [a, b]);
+}
+['in-a', 'in-b', 'in-k'].forEach(id => {
+  $(id).addEventListener('change', readInputs);
+  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+});
+
+$('btn-swap').onclick = () => {
+  if (isCom()) {
+    const { a, b, k } = state.com;
+    applyExample(k ? [a, k, b] : [b, a]);
+  } else applyExample([state.dist.b, state.dist.a]);
+};
+$('btn-nice').onclick = () => { state.dist.c = niceSplit(state.dist.a); render(); };
+$('chk-dots').onchange = e => { state.dots = e.target.checked; comKey = ''; render(); };
 
 document.querySelectorAll('.tab-btn').forEach(btn => btn.onclick = () => {
+  const wasCom = isCom();
   state.mode = btn.dataset.mode;
   state.checked = false;
+  if (wasCom !== isCom()) { state.step = 0; autoDots(); comKey = ''; }
+  else if (state.mode === 'learn') state.step = Math.min(state.step, 4);
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+  syncInputs();
+  renderExamples();
   render();
 });
 
-// ─── Drag the cut line ────────────────────────────────────────────────────────
+// ─── Drag the cut line (分配律) ───────────────────────────────────────────────
 const fig = $('fig');
 let dragging = false;
 
-function cutEnabled() { return state.mode === 'wrong' || state.step >= 1; }
+function cutEnabled() { return state.mode === 'wrong' || (state.mode === 'learn' && state.step >= 1); }
 
 function moveTo(evt) {
   const pt = fig.createSVGPoint();
   pt.x = evt.clientX; pt.y = evt.clientY;
   const p = pt.matrixTransform(fig.getScreenCTM().inverse());
-  const L = layout();
+  const L = distLayout();
   const c = cFromX(p.x - L.ox, L);
-  if (c !== state.c) { state.c = c; render(); }
+  if (c !== state.dist.c) { state.dist.c = c; render(); }
 }
 
 fig.addEventListener('pointerdown', e => {
@@ -500,11 +763,15 @@ fig.addEventListener('keydown', e => {
   const delta = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
   if (!delta) return;
   e.preventDefault();
-  const step = e.shiftKey ? 10 : 1;
-  state.c = Math.min(state.a - 1, Math.max(1, state.c + delta * step));
+  const n = e.shiftKey ? 10 : 1;
+  state.dist.c = Math.min(state.dist.a - 1, Math.max(1, state.dist.c + delta * n));
   render();
 });
 
+// ─── Start ────────────────────────────────────────────────────────────────────
+autoDots();
+syncInputs();
+renderExamples();
 render();
 </script>
 </body>
