@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>分配律圖解｜五年級數學</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:     #2563EB;
+      --blue-lt:  #DBEAFE;
+      --amber:    #F59E0B;
+      --amber-lt: #FEF3C7;
+      --amber-dk: #B45309;
+      --green-lt: #F0FDF4;
+      --red:      #DC2626;
+      --red-lt:   #FEF2F2;
+      --ink:      #1E293B;
+      --muted:    #64748B;
+      --border:   #E2E8F0;
+      --white:    #FFFFFF;
+      --radius:   12px;
+      --shadow:   0 4px 20px rgba(37,99,235,.10);
+    }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background: var(--green-lt);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* ─── Header ─── */
+    header {
+      background: var(--blue);
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 3px 12px rgba(37,99,235,.35);
+    }
+    header .logo {
+      width: 44px; height: 44px;
+      background: #fff;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    header .logo svg { width: 30px; height: 30px; }
+    header h1 { font-size: 1.25rem; font-weight: 900; letter-spacing: .04em; }
+    header p  { font-size: .8rem; opacity: .8; margin-top: 2px; }
+    header a {
+      margin-left: auto;
+      color: #fff;
+      text-decoration: none;
+      background: rgba(255,255,255,.2);
+      border: 1px solid rgba(255,255,255,.4);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: .8rem;
+      white-space: nowrap;
+    }
+
+    .app { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+
+    /* ─── Toolbar ─── */
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center;
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    .nums { display: flex; align-items: center; gap: 8px; font-size: 1.5rem; font-weight: 900; }
+    .nums input {
+      width: 4.6em; padding: 6px 8px;
+      font: inherit; text-align: center; color: var(--ink);
+      border: 2px solid var(--border); border-radius: 8px; outline: none;
+    }
+    .nums input:focus { border-color: var(--blue); }
+    .chip {
+      padding: 7px 12px;
+      border: 2px solid var(--border); border-radius: 99px;
+      background: var(--white); color: var(--ink);
+      font-family: inherit; font-size: .88rem; font-weight: 700;
+      cursor: pointer;
+    }
+    .chip:hover { border-color: var(--blue); color: var(--blue); }
+    .presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .presets span { font-size: .8rem; font-weight: 700; color: var(--muted); }
+    .dots-toggle { display: flex; align-items: center; gap: 6px; font-size: .88rem; font-weight: 700; cursor: pointer; }
+    .dots-toggle input { width: 18px; height: 18px; accent-color: var(--blue); }
+    .dots-toggle.off { opacity: .4; cursor: default; }
+
+    /* ─── Mode tabs ─── */
+    .tabs {
+      display: flex; gap: 6px;
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 6px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px 0;
+      border: none; background: transparent; border-radius: 8px;
+      font-family: inherit; font-size: .95rem; font-weight: 700;
+      color: var(--muted); cursor: pointer;
+    }
+    .tab-btn.active { background: var(--blue); color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,.30); }
+
+    /* ─── Figure ─── */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px 16px;
+    }
+    #fig { width: 100%; height: auto; display: block; touch-action: none; user-select: none; -webkit-user-select: none; font-family: 'Noto Sans TC', sans-serif; outline: none; }
+    #fig:focus-visible { outline: 3px solid var(--blue-lt); border-radius: 8px; }
+    .hint { font-size: .9rem; color: var(--muted); text-align: center; margin-top: 2px; min-height: 1.4em; }
+
+    /* ─── Equations ─── */
+    .eq { margin-top: 14px; padding: 18px 24px; }
+    .eq-line {
+      font-size: clamp(1.35rem, 3.2vw, 2.2rem);
+      font-weight: 900; line-height: 1.45;
+      opacity: .4; transition: opacity .2s;
+    }
+    .eq-line.now { opacity: 1; }
+    .eq-say {
+      font-size: clamp(1rem, 1.9vw, 1.25rem);
+      font-weight: 500; color: var(--muted);
+      margin: 0 0 8px 1.4em;
+    }
+    .eq-q { font-size: clamp(1.1rem, 2.2vw, 1.5rem); font-weight: 900; margin-top: 8px; }
+    .b { color: var(--blue); }
+    .a { color: var(--amber-dk); }
+    .r { color: var(--red); }
+    .ok { color: #15803D; }
+
+    .stepper { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+    .btn {
+      padding: 12px 24px;
+      border: 2px solid var(--blue); border-radius: var(--radius);
+      background: var(--white); color: var(--blue);
+      font-family: inherit; font-size: 1.05rem; font-weight: 900;
+      cursor: pointer;
+    }
+    .btn.primary { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,.30); }
+    .btn.warn { border-color: var(--red); color: var(--red); }
+    .btn:disabled { opacity: .35; cursor: default; box-shadow: none; }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1rem; }
+      .nums { font-size: 1.2rem; }
+      .eq { padding: 14px 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="7" width="19" height="16" rx="1.5" fill="#2563EB"/>
+      <rect x="23" y="7" width="5" height="16" rx="1.5" fill="#F59E0B"/>
+    </svg>
+  </div>
+  <div>
+    <h1>分配律圖解</h1>
+    <p>台灣國小五年級數學 · 用長方形看懂「拆開來乘」</p>
+  </div>
+  <a href="../">周長與面積出題工具 →</a>
+</header>
+
+<div class="app">
+  <div class="toolbar">
+    <div class="nums">
+      <input id="in-a" type="number" min="2" max="999" inputmode="numeric" aria-label="第一個數" value="205" />
+      <span>×</span>
+      <input id="in-b" type="number" min="2" max="999" inputmode="numeric" aria-label="第二個數" value="15" />
+    </div>
+    <button class="chip" id="btn-swap" title="改拆另一個數">⇄ 交換</button>
+    <button class="chip" id="btn-nice">✂️ 拆成好算的數</button>
+    <label class="dots-toggle" id="dots-wrap"><input type="checkbox" id="chk-dots" /> 顯示點點</label>
+    <div class="presets">
+      <span>範例</span>
+      <button class="chip" data-a="12" data-b="3">12 × 3</button>
+      <button class="chip" data-a="23" data-b="4">23 × 4</button>
+      <button class="chip" data-a="205" data-b="15">205 × 15</button>
+      <button class="chip" data-a="102" data-b="25">102 × 25</button>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" role="tab" data-mode="learn">🧩 一步一步拆</button>
+    <button class="tab-btn" role="tab" data-mode="wrong">🔍 找找看錯在哪</button>
+  </div>
+
+  <div class="card">
+    <svg id="fig" viewBox="0 0 1000 440" tabindex="0" aria-label="分配律長方形圖"><g id="g"></g></svg>
+    <p class="hint" id="hint"></p>
+  </div>
+
+  <div class="card eq">
+    <div id="eq"></div>
+    <div class="stepper" id="stepper"></div>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+const state = { a: 205, b: 15, c: 200, step: 0, mode: 'learn', checked: false, dots: false };
+const MAX_STEP = 4;
+const $ = id => document.getElementById(id);
+
+const COLOR = {
+  blue: '#2563EB', blueLt: '#DBEAFE',
+  amber: '#F59E0B', amberLt: '#FEF3C7', amberDk: '#B45309',
+  red: '#DC2626', redLt: '#FEF2F2',
+  gray: '#E2E8F0', grayDk: '#64748B', dot: '#94A3B8', ink: '#1E293B',
+};
+
+// 拆成好算的數：205 → 200 + 5、48 → 40 + 8、200 → 100 + 100
+function niceSplit(a) {
+  for (let k = Math.floor(Math.log10(a)); k >= 1; k--) {
+    const p = 10 ** k;
+    const c = a - (a % p);
+    if (c > 0 && c < a) return c;
+  }
+  return Math.max(1, Math.floor(a / 2));
+}
+
+// ─── Geometry ─────────────────────────────────────────────────────────────────
+const X0 = 90, Y0 = 84, MAXW = 860, MAXH = 290, MIN_PIECE = 46;
+
+function layout() {
+  const { a, b } = state;
+  const dotsOK = a <= 30 && b <= 20;
+  const dots = state.dots && dotsOK;
+  let W, H, cell = 0;
+  if (dots) {
+    cell = Math.min(MAXW / a, MAXH / b);
+    W = cell * a; H = cell * b;
+  } else {
+    W = MAXW;
+    H = Math.max(110, Math.min(MAXH, MAXW * b / a));
+  }
+  const ratioTrue = dots || (Math.abs(H - MAXW * b / a) < 1 && MAXW / a >= MIN_PIECE);
+  const ox = X0 + (MAXW - W) / 2;
+  return { W, H, cell, dots, dotsOK, ratioTrue, ox, oy: Y0 };
+}
+
+// 切線位置：數字大時讓窄的那塊至少有 MIN_PIECE 寬，才看得到、拖得到
+function margin(L) { return Math.min(L.W / 2, Math.max(L.W / state.a, MIN_PIECE)); }
+function cutX(c, L) {
+  const a = state.a;
+  if (L.dots) return c * L.cell;
+  if (a <= 2) return L.W / 2;
+  const m = margin(L);
+  return m + (c - 1) / (a - 2) * (L.W - 2 * m);
+}
+function cFromX(x, L) {
+  const a = state.a;
+  let c;
+  if (L.dots) c = Math.round(x / L.cell);
+  else if (a <= 2) c = 1;
+  else { const m = margin(L); c = Math.round((x - m) / (L.W - 2 * m) * (a - 2) + 1); }
+  return Math.min(a - 1, Math.max(1, c));
+}
+
+// ─── SVG helpers ──────────────────────────────────────────────────────────────
+const rectEl = (x, y, w, h, fill, stroke, extra = '') =>
+  `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}" stroke-width="3" ${extra}/>`;
+const textEl = (x, y, t, { size = 30, fill = COLOR.ink, anchor = 'middle', weight = 900 } = {}) =>
+  `<text x="${x}" y="${y}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor}" dominant-baseline="middle">${t}</text>`;
+function brace(x1, x2, y, color) {
+  return `<path d="M${x1} ${y + 10} V${y} H${x2} V${y + 10}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"/>`;
+}
+
+// ─── Render figure ────────────────────────────────────────────────────────────
+function renderFigure() {
+  const L = layout();
+  const { a, b, c, step, mode, checked } = state;
+  const d = a - c;
+  const learn = mode === 'learn';
+  const showCut = !learn || step >= 1;
+  const colored = showCut;
+  const missing = !learn && checked;
+  const showInside = learn ? step >= 2 : checked;
+  const showAreas = learn ? step >= 3 : checked;
+  const { ox, oy, W, H } = L;
+  const xc = cutX(c, L);
+  const svgH = oy + H + (showAreas ? 96 : 60);
+  $('fig').setAttribute('viewBox', `0 0 1000 ${svgH}`);
+
+  let s = '';
+
+  // 長方形
+  if (!showCut) {
+    s += rectEl(ox, oy, W, H, COLOR.gray, COLOR.grayDk);
+  } else {
+    s += rectEl(ox, oy, xc, H, COLOR.blueLt, COLOR.blue);
+    if (missing) s += rectEl(ox + xc, oy, W - xc, H, COLOR.redLt, COLOR.red, 'stroke-dasharray="10 8"');
+    else s += rectEl(ox + xc, oy, W - xc, H, COLOR.amberLt, COLOR.amber);
+  }
+
+  // 點點
+  if (L.dots) {
+    const r = L.cell * 0.26;
+    for (let i = 0; i < a; i++) {
+      for (let j = 0; j < b; j++) {
+        const cx = ox + (i + 0.5) * L.cell, cy = oy + (j + 0.5) * L.cell;
+        if (!colored) s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${COLOR.dot}"/>`;
+        else if (i < c) s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${COLOR.blue}"/>`;
+        else if (missing) s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${COLOR.red}" stroke-width="2" stroke-dasharray="4 3"/>`;
+        else s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${COLOR.amber}"/>`;
+      }
+    }
+  }
+
+  // 上方標籤
+  if (!showCut) {
+    s += brace(ox, ox + W, oy - 22, COLOR.grayDk);
+    s += textEl(ox + W / 2, oy - 50, a, { size: 34 });
+  } else {
+    s += brace(ox + 2, ox + xc - 4, oy - 22, COLOR.blue);
+    s += brace(ox + xc + 4, ox + W - 2, oy - 22, missing ? COLOR.red : COLOR.amber);
+    s += textEl(ox + xc / 2, oy - 50, c, { size: 34, fill: COLOR.blue });
+    s += textEl(ox + xc + (W - xc) / 2, oy - 50, d, { size: 34, fill: missing ? COLOR.red : COLOR.amberDk });
+  }
+
+  // 左邊標籤
+  s += textEl(ox - 20, oy + H / 2, b, { size: 34, anchor: 'end' });
+
+  // 塊內文字：「200 個 15」
+  if (showInside && !L.dots) {
+    if (xc >= 170) s += textEl(ox + xc / 2, oy + H / 2, `${c} 個 ${b}`, { size: 30, fill: COLOR.blue });
+    const rw = W - xc;
+    if (rw >= 170) s += textEl(ox + xc + rw / 2, oy + H / 2, missing ? '不見了！' : `${d} 個 ${b}`, { size: 30, fill: missing ? COLOR.red : COLOR.amberDk });
+  }
+
+  // 切線與把手
+  if (showCut) {
+    const x = ox + xc;
+    s += `<line x1="${x}" y1="${oy - 12}" x2="${x}" y2="${oy + H + 12}" stroke="${COLOR.ink}" stroke-width="3" stroke-dasharray="8 6"/>`;
+    s += `<g style="cursor:ew-resize">
+            <circle cx="${x}" cy="${oy + H + 26}" r="17" fill="${COLOR.ink}"/>
+            <path d="M${x - 9} ${oy + H + 26} l6 -6 v12 z M${x + 9} ${oy + H + 26} l-6 -6 v12 z" fill="#fff"/>
+          </g>`;
+  }
+
+  // 下方算式
+  if (showAreas) {
+    const y = oy + H + 72;
+    const leftTxt = `${c} × ${b} = ${c * b}`;
+    const rightTxt = missing ? `${d} × ${b} = ${d * b}，不見了！` : `${d} × ${b} = ${d * b}`;
+    const rw = W - xc;
+    const leftAnchor = xc < 260 ? ['start', ox] : ['middle', ox + xc / 2];
+    const rightAnchor = rw < 260 ? ['end', ox + W] : ['middle', ox + xc + rw / 2];
+    s += textEl(leftAnchor[1], y, leftTxt, { size: 28, fill: COLOR.blue, anchor: leftAnchor[0] });
+    s += textEl(rightAnchor[1], y, rightTxt, { size: 28, fill: missing ? COLOR.red : COLOR.amberDk, anchor: rightAnchor[0] });
+  }
+
+  $('g').innerHTML = s;
+
+  // 提示
+  const tips = [];
+  if (showCut) tips.push('拖曳虛線（或按 ← →）可以換一種拆法');
+  if (!L.ratioTrue) tips.push('示意圖：沒有照實際比例畫');
+  $('hint').textContent = tips.join('　·　');
+
+  const wrap = $('dots-wrap');
+  wrap.classList.toggle('off', !L.dotsOK);
+  $('chk-dots').disabled = !L.dotsOK;
+  $('chk-dots').checked = L.dots;
+}
+
+// ─── Render equations ─────────────────────────────────────────────────────────
+const B = t => `<span class="b">${t}</span>`;
+const A = t => `<span class="a">${t}</span>`;
+const R = t => `<span class="r">${t}</span>`;
+
+function renderLearn() {
+  const { a, b, c, step } = state;
+  const d = a - c;
+  const lines = [
+    [`${a} × ${b}`, `${a} × ${b} 就是「${a} 個 ${b}」`],
+    [`= (${B(c)} + ${A(d)}) × ${b}`, `把 ${a} 拆成 ${B(c)} 和 ${A(d)}`],
+    [`= ${B(`${c} × ${b}`)} + ${A(`${d} × ${b}`)}`, `${B(`${c} 個 ${b}`)}，再加上 ${A(`${d} 個 ${b}`)}：兩塊都要乘 ${b}`],
+    [`= ${B(c * b)} + ${A(d * b)}`, '分別算出兩塊有多大'],
+    [`= ${a * b}`, `<span class="ok">直接算 ${a} × ${b} 也是 ${a * b}，拆開來算，答案不會變 ✓</span>`],
+  ];
+  $('eq').innerHTML = lines.slice(0, step + 1).map(([main, say], i) =>
+    `<div class="eq-line${i === step ? ' now' : ''}">${main}</div><div class="eq-say">${say}</div>`
+  ).join('');
+  $('stepper').innerHTML = `
+    <button class="btn" id="btn-prev" ${step === 0 ? 'disabled' : ''}>← 上一步</button>
+    <button class="btn primary" id="btn-next" ${step === MAX_STEP ? 'disabled' : ''}>下一步 →</button>
+    <button class="btn" id="btn-reset">↺ 重來</button>`;
+  $('btn-prev').onclick = () => { state.step--; render(); };
+  $('btn-next').onclick = () => { state.step++; render(); };
+  $('btn-reset').onclick = () => { state.step = 0; render(); };
+}
+
+function renderWrong() {
+  const { a, b, c, checked } = state;
+  const d = a - c;
+  let html = `
+    <div class="eq-say" style="margin-left:0">小明這樣算：</div>
+    <div class="eq-line now">${a} × ${b} = ${B(`${c} × ${b}`)} + ${A(d)} = ${c * b + d}</div>
+    <div class="eq-q">這樣算對嗎？用上面的圖檢查看看。</div>`;
+  if (checked) {
+    html = `
+      <div class="eq-say" style="margin-left:0">小明這樣算：</div>
+      <div class="eq-line">${a} × ${b} = ${B(`${c} × ${b}`)} + ${R(d)} = ${c * b + d}</div>
+      <div class="eq-say">${R(`右邊那一塊是「${d} 個 ${b}」，等於 ${d * b}，小明只加了 ${d}`)}</div>
+      <div class="eq-say" style="margin-left:0">正確的算法：</div>
+      <div class="eq-line now">${a} × ${b} = ${B(`${c} × ${b}`)} + ${A(`${d} × ${b}`)} = ${B(c * b)} + ${A(d * b)} = ${a * b}</div>
+      <div class="eq-say"><span class="ok">拆開的兩塊，都要乘 ${b}</span></div>`;
+  }
+  $('eq').innerHTML = html;
+  $('stepper').innerHTML = checked
+    ? `<button class="btn" id="btn-again">↺ 再看一次</button>`
+    : `<button class="btn primary warn" id="btn-check" style="background:#DC2626;color:#fff;border-color:#DC2626">🔍 用圖檢查</button>`;
+  if (checked) $('btn-again').onclick = () => { state.checked = false; render(); };
+  else $('btn-check').onclick = () => { state.checked = true; render(); };
+}
+
+function render() {
+  renderFigure();
+  if (state.mode === 'learn') renderLearn(); else renderWrong();
+}
+
+// ─── Inputs ───────────────────────────────────────────────────────────────────
+function clampNum(v, fallback) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(999, Math.max(2, n));
+}
+
+function setNumbers(a, b) {
+  state.a = a; state.b = b;
+  state.c = niceSplit(a);
+  state.dots = a <= 30 && b <= 20;
+  state.step = 0;
+  state.checked = false;
+  $('in-a').value = a; $('in-b').value = b;
+  render();
+}
+
+$('in-a').addEventListener('change', e => setNumbers(clampNum(e.target.value, state.a), state.b));
+$('in-b').addEventListener('change', e => setNumbers(state.a, clampNum(e.target.value, state.b)));
+$('btn-swap').onclick = () => setNumbers(state.b, state.a);
+$('btn-nice').onclick = () => { state.c = niceSplit(state.a); render(); };
+$('chk-dots').onchange = e => { state.dots = e.target.checked; render(); };
+document.querySelectorAll('.presets .chip').forEach(btn =>
+  btn.onclick = () => setNumbers(+btn.dataset.a, +btn.dataset.b));
+
+document.querySelectorAll('.tab-btn').forEach(btn => btn.onclick = () => {
+  state.mode = btn.dataset.mode;
+  state.checked = false;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+  render();
+});
+
+// ─── Drag the cut line ────────────────────────────────────────────────────────
+const fig = $('fig');
+let dragging = false;
+
+function cutEnabled() { return state.mode === 'wrong' || state.step >= 1; }
+
+function moveTo(evt) {
+  const pt = fig.createSVGPoint();
+  pt.x = evt.clientX; pt.y = evt.clientY;
+  const p = pt.matrixTransform(fig.getScreenCTM().inverse());
+  const L = layout();
+  const c = cFromX(p.x - L.ox, L);
+  if (c !== state.c) { state.c = c; render(); }
+}
+
+fig.addEventListener('pointerdown', e => {
+  if (!cutEnabled()) return;
+  dragging = true;
+  fig.setPointerCapture(e.pointerId);
+  moveTo(e);
+});
+fig.addEventListener('pointermove', e => { if (dragging) moveTo(e); });
+fig.addEventListener('pointerup', () => { dragging = false; });
+fig.addEventListener('pointercancel', () => { dragging = false; });
+
+fig.addEventListener('keydown', e => {
+  if (!cutEnabled()) return;
+  const delta = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+  if (!delta) return;
+  e.preventDefault();
+  const step = e.shiftKey ? 10 : 1;
+  state.c = Math.min(state.a - 1, Math.max(1, state.c + delta * step));
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
