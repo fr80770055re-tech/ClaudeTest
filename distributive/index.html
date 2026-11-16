@@ -114,6 +114,18 @@
     .chip[hidden] { display: none; }
     .chip.solid { background: var(--blue); border-color: var(--blue); color: #fff; }
     .chip.solid:hover { opacity: .9; color: #fff; }
+    .method { display: flex; gap: 6px; }
+    .method[hidden] { display: none; }
+    .method .chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+    .method .chip:disabled { opacity: .35; cursor: default; }
+    .method .star { color: var(--amber); margin-left: 4px; }
+    .method .chip.on .star { color: #FCD34D; }
+    .reco {
+      background: var(--amber-lt); border-left: 5px solid var(--amber);
+      border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
+      font-size: clamp(1rem, 1.9vw, 1.2rem); font-weight: 700;
+    }
+    .reco .tip { font-weight: 500; color: var(--muted); font-size: .9em; }
     .dots-toggle { display: flex; align-items: center; gap: 6px; font-size: .88rem; font-weight: 700; cursor: pointer; }
     .dots-toggle input { width: 18px; height: 18px; accent-color: var(--blue); }
     .dots-toggle.off { opacity: .4; cursor: default; }
@@ -217,6 +229,10 @@
       </span>
     </div>
     <button class="chip" id="btn-swap" title="兩個數交換位置">⇄ 交換</button>
+    <div class="method" id="method">
+      <button class="chip" data-m="add">＋ 加法拆</button>
+      <button class="chip" data-m="sub">－ 減法拆</button>
+    </div>
     <button class="chip" id="btn-nice">✂️ 拆成好算的數</button>
     <label class="dots-toggle" id="dots-wrap"><input type="checkbox" id="chk-dots" /> 顯示點點</label>
 
@@ -238,6 +254,7 @@
   </div>
 
   <div class="card eq">
+    <div id="reco"></div>
     <div id="eq"></div>
     <div class="stepper" id="stepper"></div>
   </div>
@@ -248,7 +265,8 @@
 // 分配律與找錯共用一組數字；交換律另一組（可有第三個數 k）
 const state = {
   mode: 'learn',
-  dist: { a: 205, b: 15, c: 200 },
+  // method：add 加法拆（a = c + d）／sub 減法拆（a = R − e）
+  dist: { a: 205, b: 15, c: 200, R: 300, method: 'add' },
   com:  { a: 12, b: 3, k: 0 },
   step: 0,
   checked: false,
@@ -267,8 +285,9 @@ const COLOR = {
 // ─── Example bank ─────────────────────────────────────────────────────────────
 const BUILTIN = {
   dist: [
-    [12, 3], [14, 6], [23, 4], [36, 5], [48, 7], [57, 8],
-    [102, 25], [104, 15], [205, 15], [306, 12], [408, 25], [503, 16],
+    [12, 3], [14, 6], [23, 4], [36, 5], [57, 8],
+    [102, 25], [104, 15], [205, 15], [306, 12], [503, 16],
+    [19, 4], [98, 15], [99, 12], [49, 8], [199, 6], [298, 25], [497, 4], [995, 7],
   ],
   com: [
     [3, 5], [4, 7], [6, 9], [12, 3], [8, 15],
@@ -329,23 +348,59 @@ $('btn-rand').onclick = () => {
       const [x, y] = pick([[25, 4], [5, 2], [125, 8], [50, 2], [20, 5], [4, 25], [2, 50]]);
       applyExample([x, rnd(11, 99), y]);
     }
-  } else if (Math.random() < .5) {
-    let a; do { a = rnd(11, 99); } while (a % 10 === 0);
-    applyExample([a, rnd(3, 9)]);
   } else {
-    applyExample([rnd(1, 9) * 100 + rnd(1, 9), rnd(11, 29)]);
+    const kind = rnd(1, 3);
+    if (kind === 1) {
+      let a; do { a = rnd(11, 99); } while (a % 10 === 0);
+      applyExample([a, rnd(3, 9)]);
+    } else if (kind === 2) {
+      applyExample([rnd(1, 9) * 100 + rnd(1, 9), rnd(11, 29)]);
+    } else {
+      // 接近整十、整百的數，適合減法拆
+      const R = pick([20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800, 900]);
+      applyExample([R - rnd(1, 3), R < 100 ? rnd(3, 9) : rnd(4, 25)]);
+    }
   }
 };
 
-// 拆成好算的數：205 → 200 + 5、48 → 40 + 8、200 → 100 + 100
-function niceSplit(a) {
-  for (let k = Math.floor(Math.log10(a)); k >= 1; k--) {
-    const p = 10 ** k;
-    const c = a - (a % p);
-    if (c > 0 && c < a) return c;
+// ─── 怎麼拆比較好算 ───────────────────────────────────────────────────────────
+// 依每一個位值找候選：加法拆 a = c + d（c 是整十、整百…），減法拆 a = R − e（R 是往上湊的整十、整百…）
+// 「好算」的分數 = 兩個數的非 0 數字個數加起來，越少越好。
+// 分數一樣時：加法拆和減法拆比，只有差 1、2 就能湊整（像 98、49）才選減法；同一種拆法比，剩下的數越小越好。
+const nonZero = n => String(n).split('').filter(ch => ch !== '0').length;
+
+function splitCandidates(a) {
+  const out = [];
+  for (let k = 1; k <= Math.floor(Math.log10(a)); k++) {
+    const p = 10 ** k, r = a % p;
+    if (r === 0) continue;
+    if (a - r > 0) out.push({ method: 'add', big: a - r, small: r });
+    out.push({ method: 'sub', big: a - r + p, small: a - r + p - a });
   }
-  return Math.max(1, Math.floor(a / 2));
+  return out.map(x => ({ ...x, cost: nonZero(x.big) + nonZero(x.small) }));
 }
+function bestOf(list) {
+  const tie = (x, y) => {
+    if (x.method === y.method) return x.small - y.small;
+    const sub = x.method === 'sub' ? x : y;
+    const subWins = sub.small <= 2;
+    return (x === sub) === subWins ? -1 : 1;
+  };
+  return list.slice().sort((x, y) => x.cost - y.cost || tie(x, y))[0] || null;
+}
+function plan(a) {
+  const all = splitCandidates(a);
+  const add = bestOf(all.filter(x => x.method === 'add'));
+  const sub = bestOf(all.filter(x => x.method === 'sub'));
+  const best = bestOf(all);
+  return {
+    c: add ? add.big : Math.max(1, Math.floor(a / 2)),
+    R: sub ? sub.big : null,
+    recommend: best ? best.method : 'add',
+  };
+}
+// 「拆成好算的數」按鈕：加法拆的最好切法，例如 205 → 200 + 5、48 → 40 + 8
+const niceSplit = a => plan(a).c;
 
 // ─── SVG helpers ──────────────────────────────────────────────────────────────
 const rectEl = (x, y, w, h, fill, stroke, extra = '') =>
@@ -362,34 +417,37 @@ function vbrace(y1, y2, x, color) {
 // ═══ 分配律 ═══════════════════════════════════════════════════════════════════
 const X0 = 90, Y0 = 84, MAXW = 860, MAXH = 290, MIN_PIECE = 46;
 
-function distLayout() {
-  const { a, b } = state.dist;
-  const dotsOK = a <= 30 && b <= 20;
+const isSub = () => state.dist.method === 'sub' && state.dist.R;
+
+// n：長方形的總寬（加法拆是 a，減法拆是補成的整數 R）
+function distLayout(n = state.dist.a) {
+  const { b } = state.dist;
+  const dotsOK = n <= 30 && b <= 20;
   const dots = state.dots && dotsOK;
   let W, H, cell = 0;
   if (dots) {
-    cell = Math.min(MAXW / a, MAXH / b);
-    W = cell * a; H = cell * b;
+    cell = Math.min(MAXW / n, MAXH / b);
+    W = cell * n; H = cell * b;
   } else {
     W = MAXW;
-    H = Math.max(110, Math.min(MAXH, MAXW * b / a));
+    H = Math.max(110, Math.min(MAXH, MAXW * b / n));
   }
-  const ratioTrue = dots || (Math.abs(H - MAXW * b / a) < 1 && MAXW / a >= MIN_PIECE);
+  const ratioTrue = dots || (Math.abs(H - MAXW * b / n) < 1 && MAXW / n >= MIN_PIECE);
   const ox = X0 + (MAXW - W) / 2;
-  return { W, H, cell, dots, dotsOK, ratioTrue, ox, oy: Y0 };
+  return { n, W, H, cell, dots, dotsOK, ratioTrue, ox, oy: Y0 };
 }
 
 // 數字大時讓窄的那塊至少有 MIN_PIECE 寬，才看得到、拖得到
-function margin(L) { return Math.min(L.W / 2, Math.max(L.W / state.dist.a, MIN_PIECE)); }
+function margin(L) { return Math.min(L.W / 2, Math.max(L.W / L.n, MIN_PIECE)); }
 function cutX(c, L) {
-  const a = state.dist.a;
+  const a = L.n;
   if (L.dots) return c * L.cell;
   if (a <= 2) return L.W / 2;
   const m = margin(L);
   return m + (c - 1) / (a - 2) * (L.W - 2 * m);
 }
 function cFromX(x, L) {
-  const a = state.dist.a;
+  const a = L.n;
   let c;
   if (L.dots) c = Math.round(x / L.cell);
   else if (a <= 2) c = 1;
@@ -397,7 +455,78 @@ function cFromX(x, L) {
   return Math.min(a - 1, Math.max(1, c));
 }
 
+function braceUp(x1, x2, y, color) {
+  return `<path d="M${x1} ${y - 10} V${y} H${x2} V${y - 10}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"/>`;
+}
+
+// 減法拆：先補成 R × b 的大長方形，右邊多算的 e × b 那一條要拿掉
+function renderSubFigure() {
+  comKey = '';
+  const { a, b, R } = state.dist;
+  const e = R - a;
+  const { step, mode, checked } = state;
+  const learn = mode === 'learn';
+  const L = distLayout(R);
+  const { ox, oy, W, H } = L;
+  const xa = cutX(a, L);
+  const showStrip = !learn || step >= 1;
+  const showInside = learn ? step >= 2 : checked;
+  const showAreas = learn ? step >= 3 : checked;
+  const flagged = !learn && checked;
+  const bottom = oy + H + (showStrip ? 64 : 20);
+  $('fig').setAttribute('viewBox', `0 0 1000 ${bottom + (showAreas ? 70 : 20)}`);
+
+  let s = '';
+  s += rectEl(ox, oy, xa, H, showStrip ? COLOR.blueLt : COLOR.gray, showStrip ? COLOR.blue : COLOR.grayDk);
+  if (showStrip) s += rectEl(ox + xa, oy, W - xa, H, COLOR.redLt, COLOR.red, `stroke-dasharray="10 8" ${flagged ? 'stroke-width="5"' : ''}`);
+
+  if (L.dots) {
+    const r = L.cell * 0.26;
+    for (let i = 0; i < (showStrip ? R : a); i++) {
+      for (let j = 0; j < b; j++) {
+        const cx = ox + (i + 0.5) * L.cell, cy = oy + (j + 0.5) * L.cell;
+        if (i >= a) s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${COLOR.red}" stroke-width="2" stroke-dasharray="4 3"/>`;
+        else s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${showStrip ? COLOR.blue : COLOR.dot}"/>`;
+      }
+    }
+  }
+
+  // 上方：原本只有 a；補上之後是整數 R
+  if (!showStrip) {
+    s += brace(ox, ox + xa, oy - 22, COLOR.grayDk);
+    s += textEl(ox + xa / 2, oy - 50, a, { size: 34 });
+  } else {
+    s += brace(ox, ox + W, oy - 22, COLOR.ink);
+    s += textEl(ox + W / 2, oy - 50, `${R}（補成整數）`, { size: 34 });
+    // 下方：a 和多補的 e
+    s += braceUp(ox + 2, ox + xa - 4, oy + H + 20, COLOR.blue);
+    s += braceUp(ox + xa + 4, ox + W - 2, oy + H + 20, COLOR.red);
+    s += textEl(ox + xa / 2, oy + H + 46, a, { size: 30, fill: COLOR.blue });
+    s += textEl(ox + xa + (W - xa) / 2, oy + H + 46, e, { size: 30, fill: COLOR.red });
+  }
+  s += textEl(ox - 20, oy + H / 2, b, { size: 34, anchor: 'end' });
+
+  if (showInside && !L.dots) {
+    if (xa >= 170) s += textEl(ox + xa / 2, oy + H / 2, `${a} 個 ${b}`, { size: 30, fill: COLOR.blue });
+    if (W - xa >= 150) s += textEl(ox + xa + (W - xa) / 2, oy + H / 2, '多算的', { size: 28, fill: COLOR.red });
+  }
+
+  if (showAreas) {
+    const y = bottom + 40;
+    s += textEl(ox, y, `整個 ${R} × ${b} = ${R * b}`, { size: 28, anchor: 'start' });
+    s += textEl(ox + W, y, flagged ? `要拿掉 ${e} × ${b} = ${e * b}` : `拿掉 ${e} × ${b} = ${e * b}`, { size: 28, fill: COLOR.red, anchor: 'end' });
+  }
+
+  $('g').innerHTML = s;
+  const tips = [];
+  if (showStrip) tips.push(`紅色虛線那一條是多補的 ${e} 個 ${b}，最後要拿掉`);
+  if (!L.ratioTrue) tips.push('示意圖：沒有照實際比例畫');
+  $('hint').textContent = tips.join('　·　');
+  setDotsToggle(L.dotsOK, L.dots);
+}
+
 function renderDistFigure() {
+  if (isSub()) return renderSubFigure();
   comKey = '';
   const L = distLayout();
   const { a, b, c } = state.dist;
@@ -603,7 +732,66 @@ function stepLines(lines) {
   $('btn-reset').onclick = () => { state.step = 0; render(); };
 }
 
+const Rd = t => `<span class="r">${t}</span>`;
+
+// 建議用哪一種拆法，以及為什麼
+function renderReco() {
+  const box = $('reco');
+  if (isCom() || (state.mode === 'learn' && state.step < 1)) { box.innerHTML = ''; return; }
+  const { a, method } = state.dist;
+  const p = plan(a);
+  const addC = p.c, addD = a - p.c;
+  const why = {
+    add: `${a} 是 ${addC} 再多 ${addD}，用加的比較好算`,
+    sub: p.R ? `${a} 很接近 ${p.R}，只差 ${p.R - a}，先補成 ${p.R} 再減掉，比較好算` : '',
+  };
+  const name = { add: '加法拆', sub: '減法拆' };
+  const rec = p.recommend;
+  const tip = '<span class="tip">（好算＝拆出整十、整百，剩下的數越小越好）</span>';
+  box.innerHTML = method === rec
+    ? `<div class="reco">💡 這題建議用${name[rec]}：${why[rec]} ${tip}</div>`
+    : `<div class="reco">💡 這題用${name[rec]}會更好算：${why[rec]}。按上面的「${rec === 'add' ? '＋' : '－'} ${name[rec]}」比比看 ${tip}</div>`;
+}
+
+function renderLearnSub() {
+  const { a, b, R } = state.dist;
+  const e = R - a;
+  stepLines([
+    [`${a} × ${b}`, `${a} × ${b} 就是「${a} 個 ${b}」`],
+    [`= (${R} − ${Rd(e)}) × ${b}`, `${a} 很接近 ${R}：先補上 ${Rd(e)}，變成 ${R}`],
+    [`= ${R} × ${b} − ${Rd(`${e} × ${b}`)}`, `先算 ${R} 個 ${b}，再拿掉多算的 ${Rd(`${e} 個 ${b}`)}：補上的那條也要乘 ${b}`],
+    [`= ${R * b} − ${Rd(e * b)}`, '算出整塊，再算要拿掉的那一條'],
+    [`= ${a * b}`, `<span class="ok">直接算 ${a} × ${b} 也是 ${a * b}，答案一樣 ✓</span>`],
+  ]);
+}
+
+function renderWrongSub() {
+  const { a, b, R } = state.dist;
+  const { checked } = state;
+  const e = R - a;
+  let html = `
+    <div class="eq-say" style="margin-left:0">小明這樣算：</div>
+    <div class="eq-line now">${a} × ${b} = ${R} × ${b} − ${Rd(e)} = ${R * b - e}</div>
+    <div class="eq-q">這樣算對嗎？用上面的圖檢查看看。</div>`;
+  if (checked) {
+    html = `
+      <div class="eq-say" style="margin-left:0">小明這樣算：</div>
+      <div class="eq-line">${a} × ${b} = ${R} × ${b} − ${Rd(e)} = ${R * b - e}</div>
+      <div class="eq-say">${Rd(`要拿掉的是紅色那一條「${e} 個 ${b}」，等於 ${e * b}，小明只減了 ${e}`)}</div>
+      <div class="eq-say" style="margin-left:0">正確的算法：</div>
+      <div class="eq-line now">${a} × ${b} = ${R} × ${b} − ${Rd(`${e} × ${b}`)} = ${R * b} − ${Rd(e * b)} = ${a * b}</div>
+      <div class="eq-say"><span class="ok">補上的那一條，拿掉時也要乘 ${b}</span></div>`;
+  }
+  $('eq').innerHTML = html;
+  $('stepper').innerHTML = checked
+    ? `<button class="btn" id="btn-again">↺ 再看一次</button>`
+    : `<button class="btn danger" id="btn-check">🔍 用圖檢查</button>`;
+  if (checked) $('btn-again').onclick = () => { state.checked = false; render(); };
+  else $('btn-check').onclick = () => { state.checked = true; render(); };
+}
+
 function renderLearn() {
+  if (isSub()) return renderLearnSub();
   const { a, b, c } = state.dist;
   const d = a - c;
   stepLines([
@@ -616,6 +804,7 @@ function renderLearn() {
 }
 
 function renderWrong() {
+  if (isSub()) return renderWrongSub();
   const { a, b, c } = state.dist;
   const { checked } = state;
   const d = a - c;
@@ -661,13 +850,32 @@ function renderCommute() {
 function render() {
   const com = isCom();
   $('k-part').hidden = !com;
-  $('btn-nice').hidden = com;
+  $('btn-nice').hidden = com || isSub();
+  $('method').hidden = com;
+  if (!com) {
+    const p = plan(state.dist.a);
+    document.querySelectorAll('#method .chip').forEach(btn => {
+      const m = btn.dataset.m;
+      btn.classList.toggle('on', m === state.dist.method);
+      btn.disabled = m === 'sub' && !p.R;
+      const star = m === p.recommend ? '<span class="star">★建議</span>' : '';
+      btn.innerHTML = (m === 'add' ? '＋ 加法拆' : '－ 減法拆') + star;
+    });
+  }
   if (com) { renderComFigure(); renderCommute(); }
   else {
     renderDistFigure();
     if (state.mode === 'learn') renderLearn(); else renderWrong();
   }
+  renderReco();
 }
+
+document.querySelectorAll('#method .chip').forEach(btn => btn.onclick = () => {
+  if (btn.disabled) return;
+  state.dist.method = btn.dataset.m;
+  state.checked = false;
+  render();
+});
 
 // ─── Inputs ───────────────────────────────────────────────────────────────────
 function clampNum(v, fallback) {
@@ -691,7 +899,8 @@ function applyExample(ex) {
   if (isCom()) {
     state.com = { a: ex[0], b: ex[1], k: ex[2] || 0 };
   } else {
-    state.dist = { a: ex[0], b: ex[1], c: niceSplit(ex[0]) };
+    const p = plan(ex[0]);
+    state.dist = { a: ex[0], b: ex[1], c: p.c, R: p.R, method: p.recommend };
   }
   state.step = 0;
   state.checked = false;
@@ -737,7 +946,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => btn.onclick = () => {
 const fig = $('fig');
 let dragging = false;
 
-function cutEnabled() { return state.mode === 'wrong' || (state.mode === 'learn' && state.step >= 1); }
+function cutEnabled() { return !isSub() && (state.mode === 'wrong' || (state.mode === 'learn' && state.step >= 1)); }
 
 function moveTo(evt) {
   const pt = fig.createSVGPoint();
